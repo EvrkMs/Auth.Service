@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Engine/">
+    <Project Path="src/Engine/Auth.Domain/Auth.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Элементы решения/">
+    <File Path=".gitignore" />
+  </Folder>
+</Solution>
