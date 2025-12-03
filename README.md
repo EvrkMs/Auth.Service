@@ -105,7 +105,7 @@ Auth.Service/
 - Платные или кастомные модули разворачиваются как отдельные сервисы и подключаются к этому туннелю вместо встраивания в код Auth.Service.
 
 ## Технологии
-- .NET 9 + C# 13.
+- .NET 10 + C# 13.
 - Entity Framework Core 9 (основная цель — Postgres 18, но планируется поддержка MySQL и SQL Server через отдельные провайдеры).
 - OpenIddict (без Duende).
 - Telegram Widget API.

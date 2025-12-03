@@ -101,7 +101,7 @@
 - [ ] `CleanupTask`: удаление закрытых/истёкших сессий, токенов и purge denylist ключей по TTL.
 
 ## 9. Конфигурация / Ops
-- [ ] README/доки: требования (.NET 9, C# 13, Postgres 18, HTTPS-only, Telegram обязательный/опциональный сценарий).
+- [ ] README/доки: требования (.NET 10, C# 13, Postgres 18, HTTPS-only, Telegram обязательный/опциональный сценарий).
 - [ ] Валидация ENV: `AUTH_DOMAIN`, `AUTH_PUBLIC_HOST`, `AUTH_SUBDOMAIN`, `POSTGRES_CONNECTION`, `HTTPS_PORT`, `TELEGRAM_WIDGET_TOKEN`, `USE_TELEGRAM`, `USE_TELEGRAM_CHALLENGE`, `REDIS_CONNECTION`, `REDIS_NAMESPACE`.
 - [ ] Поддержка двойной конфигурации домена (`AUTH_DOMAIN` + `AUTH_PUBLIC_HOST`), описание приоритетов и fallback логики.
 - [ ] Документация и код для Redis (`REDIS_CONNECTION`, `REDIS_NAMESPACE`) и схемы ключей/TTL.
