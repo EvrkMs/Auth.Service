@@ -748,3 +748,4 @@
 
     publish-out/
 /.vs
+/src/Engine/Auth.Domain/obj
