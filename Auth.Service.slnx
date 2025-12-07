@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Auth.Domain/Auth.Domain.csproj" />
+  <Project Path="Auth.EntityFramework/Auth.EntityFramework.csproj" />
+</Solution>
