@@ -20,9 +20,4 @@
     <ProjectReference Include="..\Auth.Application\Auth.Application.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Migrations/AppDbContextModelSnapshot.cs" />
-    <Compile Include="NewMigrations/AppDbContextModelSnapshot.cs" />
-  </ItemGroup>
-
 </Project>
