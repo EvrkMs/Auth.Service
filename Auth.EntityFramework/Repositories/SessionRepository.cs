@@ -38,4 +38,13 @@ public sealed class SessionRepository : ISessionRepository
             .Include(x => x.Tokens)
             .FirstOrDefaultAsync(x => x.HandleHash == handleHash, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Session>> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Sessions
+            .Include(x => x.Tokens)
+            .Where(x => x.EmployeeId == employeeId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }

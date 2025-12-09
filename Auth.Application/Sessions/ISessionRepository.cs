@@ -11,4 +11,6 @@ public interface ISessionRepository
     Task<Session?> FindByIdAsync(Guid sessionId, CancellationToken cancellationToken);
 
     Task<Session?> FindByHandleHashForUpdateAsync(string handleHash, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Session>> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken);
 }

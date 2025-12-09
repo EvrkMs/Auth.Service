@@ -4,12 +4,14 @@ using Auth.Domain.Entity;
 using Auth.Domain.Tokens;
 using Auth.Host.Services;
 using Auth.Host.Oidc;
+using Auth.Host.Sessions;
 using Auth.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,7 +19,6 @@ namespace Auth.Host.Endpoints;
 
 public static class ConnectEndpoints
 {
-    private const string SessionCookieName = "ava.auth.session";
 
     public static void MapConnectEndpoints(this IEndpointRouteBuilder app)
     {
@@ -273,7 +274,7 @@ public static class ConnectEndpoints
             return validation;
         }
 
-        await SignOutUserAsync(httpContext, sessionService, sessionRepository, tokenValueGenerator, httpContext.RequestAborted);
+        await SessionCookieHelper.RevokeCurrentSessionAsync(httpContext, sessionService, sessionRepository, tokenValueGenerator, httpContext.RequestAborted);
 
         var target = redirectUri ?? "/";
         if (!string.IsNullOrWhiteSpace(request.State))
@@ -291,7 +292,8 @@ public static class ConnectEndpoints
         HttpContext httpContext,
         ITokenValueGenerator tokenValueGenerator,
         ITokenRepository tokenRepository,
-        Auth.Application.Abstractions.ISystemClock clock)
+        Auth.Application.Abstractions.ISystemClock clock,
+        UserManager<Employee> userManager)
     {
         if (!TryGetBearerToken(httpContext.Request, out var tokenValue))
         {
@@ -317,10 +319,14 @@ public static class ConnectEndpoints
         }
 
         var employee = token.Employee ?? throw new InvalidOperationException("Token is missing employee navigation property.");
+        var roles = await userManager.GetRolesAsync(employee);
+        var roleArray = roles?.ToArray() ?? Array.Empty<string>();
 
         var response = new Dictionary<string, object?>
         {
-            ["sub"] = employee.Id.ToString()
+            ["sub"] = employee.Id.ToString(),
+            ["email"] = employee.Email,
+            ["phone_number"] = employee.PhoneNumber
         };
 
         if (!string.IsNullOrWhiteSpace(employee.DisplayName))
@@ -336,6 +342,11 @@ public static class ConnectEndpoints
         if (!string.IsNullOrWhiteSpace(token.SessionHandleHash))
         {
             response["sid"] = token.SessionHandleHash;
+        }
+
+        if (roleArray.Length > 0)
+        {
+            response["roles"] = roleArray;
         }
 
         if (scopes.Count > 0)
@@ -406,7 +417,7 @@ public static class ConnectEndpoints
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var existingHandle = httpContext.Request.Cookies[SessionCookieName];
+        var existingHandle = SessionCookieHelper.GetSessionHandle(httpContext);
         if (!string.IsNullOrEmpty(existingHandle))
         {
             var hash = tokenValueGenerator.ComputeHash(existingHandle);
@@ -416,7 +427,7 @@ public static class ConnectEndpoints
                 return existing;
             }
 
-            httpContext.Response.Cookies.Delete(SessionCookieName);
+            httpContext.Response.Cookies.Delete(SessionCookieHelper.SessionCookieName);
             await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
             return null;
         }
@@ -458,7 +469,7 @@ public static class ConnectEndpoints
             Expires = DateTimeOffset.UtcNow.AddDays(30)
         };
 
-        context.Response.Cookies.Append(SessionCookieName, handle, options);
+        context.Response.Cookies.Append(SessionCookieHelper.SessionCookieName, handle, options);
     }
 
     private static string? BuildSessionMetadata(string? userAgent, string? ip)
@@ -576,26 +587,4 @@ public static class ConnectEndpoints
         return null;
     }
 
-    private static async Task SignOutUserAsync(
-        HttpContext context,
-        SessionService sessionService,
-        ISessionRepository sessionRepository,
-        ITokenValueGenerator tokenValueGenerator,
-        CancellationToken cancellationToken)
-    {
-        var sessionHandle = context.Request.Cookies[SessionCookieName];
-        if (!string.IsNullOrEmpty(sessionHandle))
-        {
-            var hash = tokenValueGenerator.ComputeHash(sessionHandle);
-            var session = await sessionRepository.FindByHandleHashForUpdateAsync(hash, cancellationToken);
-            if (session is not null)
-            {
-                await sessionService.RevokeAsync(session, "User logout", cancellationToken);
-            }
-
-            context.Response.Cookies.Delete(SessionCookieName);
-        }
-
-        await context.SignOutAsync(IdentityConstants.ApplicationScheme);
-    }
 }
