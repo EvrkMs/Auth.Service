@@ -7,11 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Auth.EntityFramework.Migrations
 {
     /// <inheritdoc />
-<<<<<<<< HEAD:Auth.EntityFramework/Migrations/20251209202445_NewInit.cs
-    public partial class NewInit : Migration
-========
     public partial class Init : Migration
->>>>>>>> 805a4b5 (re-init migration):Auth.EntityFramework/Migrations/20251209203732_Init.cs
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

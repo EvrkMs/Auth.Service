@@ -12,13 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Auth.EntityFramework.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-<<<<<<<< HEAD:Auth.EntityFramework/Migrations/20251209202445_NewInit.Designer.cs
-    [Migration("20251209202445_NewInit")]
-    partial class NewInit
-========
     [Migration("20251209203732_Init")]
     partial class Init
->>>>>>>> 805a4b5 (re-init migration):Auth.EntityFramework/Migrations/20251209203732_Init.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
