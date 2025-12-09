@@ -66,7 +66,7 @@ public static class TelegramEndpoints
 
         try
         {
-            var profile = await bindingService.BindAsync(user, command, cancellationToken);
+            var profile = await bindingService.BindTelegramAsync(user, command, cancellationToken);
             return Results.Ok(MapResponse(profile));
         }
         catch (TelegramValidationException ex)

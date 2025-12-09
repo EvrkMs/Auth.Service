@@ -41,7 +41,8 @@ public sealed class TelegramBindingService
             boundAt);
     }
 
-    public async Task<TelegramProfile> BindAsync(Employee employee, TelegramBindCommand command, CancellationToken cancellationToken)
+    // ⬇⬇⬇ Переименовали метод, чтобы ASP.NET не пытался использовать его как BindAsync
+    public async Task<TelegramProfile> BindTelegramAsync(Employee employee, TelegramBindCommand command, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(command.Password))
         {
