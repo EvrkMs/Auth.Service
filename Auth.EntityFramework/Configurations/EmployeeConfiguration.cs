@@ -11,5 +11,20 @@ internal sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.DisplayName)
             .HasMaxLength(256)
             .IsRequired();
+
+        builder.Property(x => x.TelegramUsername)
+            .HasMaxLength(64);
+
+        builder.Property(x => x.TelegramFirstName)
+            .HasMaxLength(128);
+
+        builder.Property(x => x.TelegramLastName)
+            .HasMaxLength(128);
+
+        builder.Property(x => x.TelegramPhotoUrl)
+            .HasMaxLength(512);
+
+        builder.HasIndex(x => x.TelegramId)
+            .IsUnique();
     }
 }

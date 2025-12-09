@@ -10,6 +10,7 @@ COPY ["Auth.Infrastructure/Auth.Infrastructure.csproj", "Auth.Infrastructure/"]
 COPY ["Auth.EntityFramework/Auth.EntityFramework.csproj", "Auth.EntityFramework/"]
 COPY ["Auth.Application/Auth.Application.csproj", "Auth.Application/"]
 COPY ["Auth.Domain/Auth.Domain.csproj", "Auth.Domain/"]
+COPY ["Auth.Telegram/Auth.Telegram.csproj", "Auth.Telegram/"]
 RUN dotnet restore "Auth.Host/Auth.Host.csproj"
 COPY . .
 WORKDIR "/src/Auth.Host"

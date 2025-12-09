@@ -79,6 +79,14 @@
                 <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30 hover:translate-y-[-1px] transition">
                     Войти
                 </button>
+                <div class="pt-4 border-t border-slate-800 mt-6 text-center">
+                    <p class="text-xs text-slate-500 mb-3">или используйте Telegram</p>
+                    <a class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-700 text-sm text-slate-200 hover:bg-slate-800/60"
+                       href="@Url.Page("/Account/Telegram/Login", new { ReturnUrl = Model?.ReturnUrl })">
+                        <i class="fa-brands fa-telegram text-sky-400"></i>
+                        Войти через Telegram
+                    </a>
+                </div>
             </form>
         </div>
     </div>

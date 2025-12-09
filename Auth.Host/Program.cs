@@ -4,6 +4,7 @@ using Auth.Host.Endpoints;
 using Auth.Host.Services;
 using Auth.Host.Oidc;
 using Auth.Infrastructure;
+using Auth.Telegram;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -38,6 +39,7 @@ if (!string.IsNullOrWhiteSpace(configuredIssuer))
 builder.Services.AddSingleton(oidcOptions);
 builder.Services.AddSingleton<OidcSigningKeyProvider>();
 builder.Services.AddSingleton<OidcIdTokenFactory>();
+builder.Services.AddTelegramIntegration(builder.Configuration);
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? builder.Configuration["DATABASE__CONNECTION"];
@@ -158,6 +160,7 @@ app.MapConnectEndpoints();
 app.MapSessionsEndpoints();
 app.MapUserManagementEndpoints();
 app.MapOidcEndpoints();
+app.MapTelegramEndpoints();
 
 app.Run();
 
