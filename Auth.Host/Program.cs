@@ -46,7 +46,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var resolvedConnection = connectionString ?? "Host=auth-db;Port=5432;Database=auth;Username=auth;Password=authpassword";
+    var resolvedConnection = connectionString ?? "Host=localhost;Port=5432;Database=auth;Username=auth;Password=authpassword";
     options.UseNpgsql(resolvedConnection);
 });
 
