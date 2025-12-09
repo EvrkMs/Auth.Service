@@ -74,8 +74,8 @@
 
         window.handleTelegramAuth = function (user) {
             telegramUser = user;
-            const label = user.username ? '@' + user.username : user.first_name || 'Telegram пользователь';
-            setStatus(`Подтверждён аккаунт ${label}. Теперь можно привязать.`, false);
+        const label = user.username ? '@@' + user.username : user.first_name || 'Telegram пользователь';
+                    setStatus(`Подтверждён аккаунт ${label}. Теперь можно привязать.`, false);
         };
 
         async function submitTelegramBind(event) {
