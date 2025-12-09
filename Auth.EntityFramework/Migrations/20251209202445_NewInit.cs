@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Auth.EntityFramework.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class NewInit : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,6 +32,12 @@ namespace Auth.EntityFramework.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     DisplayName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    TelegramId = table.Column<long>(type: "bigint", nullable: true),
+                    TelegramUsername = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    TelegramFirstName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    TelegramLastName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    TelegramPhotoUrl = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    TelegramBoundAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -258,6 +264,12 @@ namespace Auth.EntityFramework.Migrations
                 name: "EmailIndex",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_TelegramId",
+                table: "AspNetUsers",
+                column: "TelegramId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
