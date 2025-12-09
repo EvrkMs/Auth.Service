@@ -9,4 +9,6 @@ public interface ISessionRepository
     Task<Session?> FindByHandleHashAsync(string handleHash, CancellationToken cancellationToken);
 
     Task<Session?> FindByIdAsync(Guid sessionId, CancellationToken cancellationToken);
+
+    Task<Session?> FindByHandleHashForUpdateAsync(string handleHash, CancellationToken cancellationToken);
 }

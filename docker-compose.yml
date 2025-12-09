@@ -26,20 +26,6 @@ services:
     networks:
       - auth-network
 
-  auth-web:
-    container_name: auth.web
-    build:
-      context: Auth.Web
-      dockerfile: Dockerfile
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8080
-    depends_on:
-      - auth-host
-    ports:
-      - "127.0.0.1:4173:4173"
-    networks:
-      - auth-network
-
 volumes:
   auth-db-data:
 

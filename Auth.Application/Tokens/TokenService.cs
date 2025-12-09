@@ -15,7 +15,6 @@ public sealed class TokenService
     private readonly TokenOptions _options;
     private readonly ISystemClock _clock;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IAccessTokenEncoder? _accessTokenEncoder;
 
     public TokenService(
         ITokenRepository tokens,
@@ -23,8 +22,7 @@ public sealed class TokenService
         ITokenClaimsFactory claimsFactory,
         TokenOptions options,
         ISystemClock clock,
-        IUnitOfWork unitOfWork,
-        IAccessTokenEncoder? accessTokenEncoder = null)
+        IUnitOfWork unitOfWork)
     {
         _tokens = tokens;
         _values = values;
@@ -32,7 +30,6 @@ public sealed class TokenService
         _options = options;
         _clock = clock;
         _unitOfWork = unitOfWork;
-        _accessTokenEncoder = accessTokenEncoder;
     }
 
     public async Task<IssueTokenResult> IssueAsync(IssueTokenRequest request, CancellationToken cancellationToken = default)
@@ -45,7 +42,9 @@ public sealed class TokenService
         var now = _clock.UtcNow;
 
         var scopesString = request.Scopes.Count > 0 ? string.Join(' ', request.Scopes) : null;
+        var accessValue = _values.Generate();
         var accessToken = CreateToken(request.Employee, request.Session, request.ClientId, TokenType.Access, now, policy.AccessTokenLifetime, scopesString);
+        accessToken.Hash = accessValue.Hash;
         accessToken.Metadata = request.Session?.Metadata;
         accessToken.Scopes = scopesString;
 
@@ -59,9 +58,7 @@ public sealed class TokenService
         }, cancellationToken);
 
         accessToken.Payload = SerializeClaims(accessClaims);
-        var (accessTokenValue, accessTokenHash) = await CreateAccessTokenValueAsync(request.ClientId, accessClaims, accessToken.CreatedAt, accessToken.ExpiresAt, cancellationToken);
-        accessToken.Hash = accessTokenHash;
-        
+
         await _tokens.AddAsync(accessToken, cancellationToken);
 
         IssuedToken? refreshIssued = null;
@@ -78,21 +75,8 @@ public sealed class TokenService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var issuedAccess = new IssuedToken(accessTokenValue, accessToken.ExpiresAt, TokenType.Access);
+        var issuedAccess = new IssuedToken(accessValue.Value, accessToken.ExpiresAt, TokenType.Access);
         return new IssueTokenResult(issuedAccess, refreshIssued, policy, request.Scopes);
-    }
-
-    private async Task<(string Value, string Hash)> CreateAccessTokenValueAsync(string clientId, IReadOnlyCollection<Claim> claims, DateTimeOffset issuedAt, DateTimeOffset expiresAt, CancellationToken cancellationToken)
-    {
-        if (_accessTokenEncoder is null)
-        {
-            var fallback = _values.Generate();
-            return (fallback.Value, fallback.Hash);
-        }
-
-        var descriptor = new AccessTokenDescriptor(clientId, claims, issuedAt, expiresAt);
-        var value = await _accessTokenEncoder.EncodeAsync(descriptor, cancellationToken);
-        return (value, _values.ComputeHash(value));
     }
 
     private Token CreateToken(Employee employee, Session? session, string clientId, TokenType type, DateTimeOffset now, TimeSpan lifetime, string? scopes = null)

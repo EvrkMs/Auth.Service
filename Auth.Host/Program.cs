@@ -9,24 +9,26 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
-using Auth.Application.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var oidcSection = builder.Configuration.GetSection("Oidc");
 var oidcOptions = oidcSection.Get<OidcOptions>() ?? new OidcOptions();
 oidcOptions.SigningKey ??= builder.Configuration["OIDC__SIGNING_KEY"];
-if (string.IsNullOrWhiteSpace(oidcOptions.Issuer))
+var configuredIssuer =
+    builder.Configuration["OIDC__ISSUER"]
+    ?? builder.Configuration["AUTH_ISSUER"]
+    ?? builder.Configuration["AUTH_DOMAIN"]
+    ?? builder.Configuration["AUTH_HOST_DOMAIN"];
+
+if (!string.IsNullOrWhiteSpace(configuredIssuer))
 {
-    oidcOptions.Issuer = builder.Configuration["OIDC__ISSUER"]
-        ?? builder.Configuration["AUTH_ISSUER"]
-        ?? oidcOptions.Issuer;
+    oidcOptions.Issuer = configuredIssuer!;
 }
 
 builder.Services.AddSingleton(oidcOptions);
 builder.Services.AddSingleton<OidcSigningKeyProvider>();
 builder.Services.AddSingleton<OidcIdTokenFactory>();
-builder.Services.AddSingleton<IAccessTokenEncoder, JwtAccessTokenEncoder>();
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? builder.Configuration["DATABASE__CONNECTION"];

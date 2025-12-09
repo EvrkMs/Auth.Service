@@ -30,4 +30,12 @@ public sealed class SessionRepository : ISessionRepository
             .Include(x => x.Tokens)
             .FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
     }
+
+    public Task<Session?> FindByHandleHashForUpdateAsync(string handleHash, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(handleHash);
+        return _dbContext.Sessions
+            .Include(x => x.Tokens)
+            .FirstOrDefaultAsync(x => x.HandleHash == handleHash, cancellationToken);
+    }
 }

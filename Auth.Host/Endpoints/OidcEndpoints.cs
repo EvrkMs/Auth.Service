@@ -17,6 +17,7 @@ public static class OidcEndpoints
                 authorization_endpoint = $"{issuer}/connect/authorize",
                 token_endpoint = $"{issuer}/connect/token",
                 userinfo_endpoint = $"{issuer}/connect/userinfo",
+                end_session_endpoint = $"{issuer}/connect/logout",
                 jwks_uri = $"{issuer}/.well-known/jwks.json",
                 response_types_supported = new[] { "code" },
                 subject_types_supported = new[] { "public" },

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
+using System.Linq;
 
 namespace Auth.Host.Services;
 
@@ -21,8 +22,11 @@ public sealed class ClientRegistry
                     ClientId = child["ClientId"] ?? child.Key,
                     DisplayName = child["DisplayName"] ?? child.Key,
                     RedirectUri = child["RedirectUri"] ?? string.Empty,
-                    AllowedScopes = child["Scopes"]?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>()
+                    AllowedScopes = child["Scopes"]?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
+                    PostLogoutRedirectUri = child["PostLogoutRedirectUri"]
                 };
+
+                registration.PostLogoutRedirectUri ??= registration.RedirectUri;
 
                 if (!string.IsNullOrWhiteSpace(registration.ClientId) && !string.IsNullOrWhiteSpace(registration.RedirectUri))
                 {
@@ -38,7 +42,8 @@ public sealed class ClientRegistry
                 ClientId = "spa-localhost",
                 DisplayName = "Localhost SPA",
                 RedirectUri = "http://localhost:4173/callback",
-                AllowedScopes = new[] { "openid", "profile", "offline_access" }
+                AllowedScopes = new[] { "openid", "profile", "offline_access" },
+                PostLogoutRedirectUri = "http://localhost:4173/logout"
             };
         }
     }
@@ -53,6 +58,17 @@ public sealed class ClientRegistry
         _clients.TryGetValue(clientId, out var registration);
         return registration;
     }
+
+    public ClientRegistration? FindByLogoutRedirectUri(string? uri)
+    {
+        if (string.IsNullOrWhiteSpace(uri))
+        {
+            return null;
+        }
+
+        return _clients.Values.FirstOrDefault(client =>
+            string.Equals(client.PostLogoutRedirectUri ?? client.RedirectUri, uri, StringComparison.Ordinal));
+    }
 }
 
 public sealed class ClientRegistration
@@ -64,4 +80,6 @@ public sealed class ClientRegistration
     public string RedirectUri { get; init; } = string.Empty;
 
     public IReadOnlyCollection<string> AllowedScopes { get; init; } = Array.Empty<string>();
+
+    public string? PostLogoutRedirectUri { get; set; }
 }

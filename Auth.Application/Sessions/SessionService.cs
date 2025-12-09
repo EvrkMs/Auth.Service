@@ -1,4 +1,5 @@
-﻿using Auth.Application.Abstractions;
+﻿using System.Linq;
+using Auth.Application.Abstractions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
 
@@ -53,5 +54,29 @@ public sealed class SessionService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new CreateSessionResult(session.Id, handle?.Value);
+    }
+
+    public async Task RevokeAsync(Session session, string? reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (session.RevokedAt is not null)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+        session.RevokedAt = now;
+        session.RevokedReason = reason;
+
+        if (session.Tokens is not null)
+        {
+            foreach (var token in session.Tokens.Where(t => t.RevokedAt is null))
+            {
+                token.RevokedAt = now;
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -25,6 +25,7 @@ public static class ConnectEndpoints
         group.MapGet("/authorize", AuthorizeAsync);
         group.MapPost("/token", ExchangeTokenAsync);
         group.MapGet("/userinfo", UserInfoAsync);
+        group.MapGet("/logout", LogoutAsync);
     }
 
     private static async Task<IResult> AuthorizeAsync(
@@ -258,6 +259,34 @@ public static class ConnectEndpoints
         }
     }
 
+    private static async Task<IResult> LogoutAsync(
+        HttpContext httpContext,
+        [AsParameters] LogoutRequest request,
+        ClientRegistry clients,
+        SessionService sessionService,
+        ISessionRepository sessionRepository,
+        ITokenValueGenerator tokenValueGenerator)
+    {
+        var validation = ValidateLogoutRequest(request, clients, out var redirectUri);
+        if (validation is not null)
+        {
+            return validation;
+        }
+
+        await SignOutUserAsync(httpContext, sessionService, sessionRepository, tokenValueGenerator, httpContext.RequestAborted);
+
+        var target = redirectUri ?? "/";
+        if (!string.IsNullOrWhiteSpace(request.State))
+        {
+            target = AppendQuery(target, new Dictionary<string, string?>
+            {
+                ["state"] = request.State
+            });
+        }
+
+        return Results.Redirect(target);
+    }
+
     private static async Task<IResult> UserInfoAsync(
         HttpContext httpContext,
         ITokenValueGenerator tokenValueGenerator,
@@ -317,7 +346,7 @@ public static class ConnectEndpoints
         return Results.Json(response);
     }
 
-    private static string AppendQuery(string uri, IDictionary<string, string> parameters)
+    private static string AppendQuery(string uri, IDictionary<string, string?> parameters)
     {
         var filtered = parameters
             .Where(kvp => !string.IsNullOrEmpty(kvp.Value))
@@ -350,6 +379,21 @@ public static class ConnectEndpoints
 
         [FromQuery(Name = "nonce")]
         public string? Nonce { get; init; }
+    }
+
+    public sealed record LogoutRequest
+    {
+        [FromQuery(Name = "post_logout_redirect_uri")]
+        public string? PostLogoutRedirectUri { get; init; }
+
+        [FromQuery(Name = "state")]
+        public string? State { get; init; }
+
+        [FromQuery(Name = "client_id")]
+        public string? ClientId { get; init; }
+
+        [FromQuery(Name = "id_token_hint")]
+        public string? IdTokenHint { get; init; }
     }
 
     private static async Task<Session?> EnsureSessionAsync(
@@ -483,4 +527,75 @@ public static class ConnectEndpoints
         string.IsNullOrWhiteSpace(scopes)
             ? Array.Empty<string>()
             : scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static IResult? ValidateLogoutRequest(LogoutRequest request, ClientRegistry clients, out string? redirectUri)
+    {
+        redirectUri = null;
+
+        if (!string.IsNullOrWhiteSpace(request.PostLogoutRedirectUri) &&
+            !Uri.TryCreate(request.PostLogoutRedirectUri, UriKind.Absolute, out _))
+        {
+            return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid post_logout_redirect_uri" });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ClientId))
+        {
+            var client = clients.Find(request.ClientId);
+            if (client is null)
+            {
+                return Results.BadRequest(new { error = "invalid_client" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.PostLogoutRedirectUri))
+            {
+                redirectUri = client.PostLogoutRedirectUri ?? client.RedirectUri;
+                return null;
+            }
+
+            var allowed = client.PostLogoutRedirectUri ?? client.RedirectUri;
+            if (!string.Equals(allowed, request.PostLogoutRedirectUri, StringComparison.Ordinal))
+            {
+                return Results.BadRequest(new { error = "invalid_request", error_description = "Unregistered post_logout_redirect_uri" });
+            }
+
+            redirectUri = request.PostLogoutRedirectUri;
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PostLogoutRedirectUri))
+        {
+            var match = clients.FindByLogoutRedirectUri(request.PostLogoutRedirectUri);
+            if (match is null)
+            {
+                return Results.BadRequest(new { error = "invalid_request", error_description = "Unregistered post_logout_redirect_uri" });
+            }
+
+            redirectUri = request.PostLogoutRedirectUri;
+        }
+
+        return null;
+    }
+
+    private static async Task SignOutUserAsync(
+        HttpContext context,
+        SessionService sessionService,
+        ISessionRepository sessionRepository,
+        ITokenValueGenerator tokenValueGenerator,
+        CancellationToken cancellationToken)
+    {
+        var sessionHandle = context.Request.Cookies[SessionCookieName];
+        if (!string.IsNullOrEmpty(sessionHandle))
+        {
+            var hash = tokenValueGenerator.ComputeHash(sessionHandle);
+            var session = await sessionRepository.FindByHandleHashForUpdateAsync(hash, cancellationToken);
+            if (session is not null)
+            {
+                await sessionService.RevokeAsync(session, "User logout", cancellationToken);
+            }
+
+            context.Response.Cookies.Delete(SessionCookieName);
+        }
+
+        await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+    }
 }
