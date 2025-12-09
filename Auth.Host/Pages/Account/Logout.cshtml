@@ -1,0 +1,36 @@
+@page
+@model Auth.Host.Pages.Account.LogoutModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Выход";
+}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Ava Identity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+    <div class="bg-slate-900/80 w-full max-w-md rounded-2xl border border-slate-800 p-8 space-y-6 text-center">
+        <div>
+            <div class="w-14 h-14 bg-red-500/30 text-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
+                    <path fill-rule="evenodd" d="M12 2.25A9.75 9.75 0 1 0 21.75 12 9.761 9.761 0 0 0 12 2.25Zm-2.72 6.97a.75.75 0 0 1 1.06 0L12 9.94l1.66-1.72a.75.75 0 1 1 1.08 1.04L13.06 11l1.65 1.72a.75.75 0 1 1-1.08 1.04L12 12.06l-1.66 1.7a.75.75 0 0 1-1.08-1.04L10.94 11 9.29 9.26a.75.75 0 0 1 0-1.04Z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-semibold">Завершить сессию?</h1>
+            <p class="text-slate-400 mt-2">Вы действительно хотите выйти из аккаунта?</p>
+        </div>
+        <form method="post" class="space-y-4">
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.ReturnUrl)
+            <button type="submit" class="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition">
+                Выйти
+            </button>
+        </form>
+        <a href="@Model.ReturnUrl" class="text-sm text-slate-400 hover:text-slate-200">Отмена</a>
+    </div>
+</body>
+</html>

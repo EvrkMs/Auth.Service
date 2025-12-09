@@ -1,0 +1,86 @@
+@page
+@model Auth.Host.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Вход";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Ava Auth</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-S3Q6kse8P+U8qovcNj9gvv3I0Yk9izKOfDH1wRmjPxAclNsQG2faFYho0PAZwWR9a01eIG3BE7CFnWT+jJu9oA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="min-h-screen flex items-center justify-center py-10 px-6">
+        <div class="w-full max-w-lg bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+            <div class="mb-8 text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 mx-auto flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-shield-halved text-2xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-semibold">Ava Identity</h1>
+                <p class="text-sm text-slate-400 mt-2">Введите учётные данные, чтобы продолжить авторизацию</p>
+            </div>
+
+            <form method="post" class="space-y-6">
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.ReturnUrl)
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="bg-red-500/10 border border-red-500/40 text-red-200 text-sm rounded-xl px-4 py-3">
+                        @Html.ValidationSummary(true, "", new { @class = "text-sm" })
+                    </div>
+                }
+
+                <div>
+                    <label class="text-sm font-medium text-slate-300">Имя пользователя</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        @Html.TextBoxFor(m => m.UserName, new {
+                            @class = "w-full pl-10 pr-3 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none",
+                            placeholder = "user@ava",
+                            autofocus = "autofocus"
+                        })
+                    </div>
+                    @Html.ValidationMessageFor(m => m.UserName, "", new { @class = "text-sm text-red-300 mt-1" })
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-slate-300">Пароль</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        @Html.PasswordFor(m => m.Password, new {
+                            @class = "w-full pl-10 pr-3 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none",
+                            placeholder = "••••••••"
+                        })
+                    </div>
+                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-sm text-red-300 mt-1" })
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-400">
+                        @Html.CheckBoxFor(m => m.RememberMe, new { @class = "form-checkbox rounded text-purple-500 focus:ring-purple-400" })
+                        Запомнить меня
+                    </label>
+                    @if (!string.IsNullOrEmpty(Model?.ReturnUrl) && Model.ReturnUrl.Contains("/connect/authorize", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span class="text-xs text-slate-400">Продолжаем OAuth 2.0 / PKCE</span>
+                    }
+                </div>
+
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30 hover:translate-y-[-1px] transition">
+                    Войти
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
