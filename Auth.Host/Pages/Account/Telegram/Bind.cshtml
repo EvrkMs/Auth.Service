@@ -1,5 +1,6 @@
 @page
 @model Auth.Host.Pages.Account.Telegram.BindModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @{
     ViewData["Title"] = "Привязка Telegram";
     Layout = null;
@@ -18,8 +19,11 @@
         <div class="w-full max-w-xl bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl">
             <div class="mb-6 text-center">
                 <h1 class="text-3xl font-semibold">Привязка Telegram</h1>
-                <p class="text-sm text-slate-400 mt-2">Подтвердите пароль и авторизуйтесь через Telegram, чтобы связать аккаунт</p>
+                <p class="text-sm text-slate-400 mt-2">
+                    Подтвердите пароль и авторизуйтесь через Telegram, чтобы связать аккаунт
+                </p>
             </div>
+
             @if (string.IsNullOrWhiteSpace(Model.BotUsername))
             {
                 <div class="bg-red-500/10 border border-red-500/40 text-red-200 text-sm rounded-xl px-4 py-3">
@@ -31,39 +35,75 @@
                 <form class="space-y-6" onsubmit="submitTelegramBind(event)">
                     <div>
                         <label class="text-sm font-medium text-slate-300">Пароль</label>
-                        <input id="password-input" type="password" class="mt-1 w-full px-4 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="Введите пароль" required />
-                        <p class="text-xs text-slate-400 mt-1">Пароль требуется для подтверждения привязки.</p>
+                        <input id="password-input"
+                               type="password"
+                               class="mt-1 w-full px-4 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                               placeholder="Введите пароль"
+                               required />
+                        <p class="text-xs text-slate-400 mt-1">
+                            Пароль требуется для подтверждения привязки.
+                        </p>
                     </div>
-                    <div>
-                        <p class="text-sm text-slate-300 mb-3">1. Авторизуйтесь через Telegram:</p>
-                        <div class="flex justify-center" id="telegram-widget">
-                            <script async src="https://telegram.org/js/telegram-widget.js?22"
-                                    data-telegram-login="@Model.BotUsername"
-                                    data-size="large"
-                                    data-request-access="write"
-                                    data-onauth="handleTelegramAuth"></script>
+
+            <div>
+                <p class="text-sm text-slate-300 mb-3">1. Авторизуйтесь через Telegram:</p>
+                <div class="flex justify-center" id="telegram-widget">
+                    <script data-cfasync="false">
+                        window.__telegramQueue = window.__telegramQueue || [];
+                        window.handleTelegramAuth = function (user) {
+                            window.__telegramQueue.push(user);
+                        };
+                    </script>
+                    <script data-cfasync="false" async src="https://telegram.org/js/telegram-widget.js?22"
+                            data-telegram-login="@Model.BotUsername"
+                            data-size="large"
+                            data-request-access="write"
+                            data-onauth="handleTelegramAuth(user)"></script>
+                </div>
+            </div>
+
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex items-start gap-3">
+                        <div id="tg-status-icon"
+                             class="mt-1 h-4 w-4 rounded-full border border-slate-500 flex items-center justify-center text-xs text-transparent">
+                            ✓
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-300 mb-1">
+                                2. Нажмите «Привязать Telegram» после успешной авторизации.
+                            </p>
+                            <p id="status" class="text-sm text-slate-400">
+                                Telegram пока не подтверждён.
+                            </p>
                         </div>
                     </div>
-                    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                        <p class="text-sm text-slate-300 mb-2">2. Нажмите «Привязать Telegram» после успешной авторизации.</p>
-                        <p id="status" class="text-sm text-slate-400">Telegram пока не подтверждён.</p>
-                    </div>
+
                     <div class="space-y-2">
-                        <button id="bind-button" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button id="bind-button"
+                                type="submit"
+                                class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
                             Привязать Telegram
                         </button>
-                        <a class="block text-center text-sm text-slate-400 hover:text-white" href="@Model.SafeReturnUrl">Вернуться назад</a>
+                        <a class="block text-center text-sm text-slate-400 hover:text-white"
+                           href="@Model.SafeReturnUrl">
+                            Вернуться назад
+                        </a>
                     </div>
                 </form>
             }
         </div>
     </div>
 
-    <script>
+<script data-cfasync="false">
         const statusEl = document.getElementById('status');
         const bindButton = document.getElementById('bind-button');
         const passwordInput = document.getElementById('password-input');
+        const tgStatusIcon = document.getElementById('tg-status-icon');
+        const safeReturnUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SafeReturnUrl));
+        const shouldLog = @(Env.IsDevelopment().ToString().ToLower());
+
         let telegramUser = null;
+        let telegramConfirmed = false;
 
         function setStatus(message, isError = false) {
             if (!statusEl) return;
@@ -72,14 +112,54 @@
             statusEl.classList.toggle('text-slate-400', !isError);
         }
 
-        window.handleTelegramAuth = function (user) {
+        function updateBindButtonState() {
+            const hasPassword = passwordInput && passwordInput.value.trim().length > 0;
+            bindButton.disabled = !(telegramConfirmed && hasPassword);
+        }
+
+        // делаем явную функцию и вешаем на window
+        function handleTelegramAuth(user) {
+            if (shouldLog) {
+                console.log('handleTelegramAuth user:', user);
+            } else {
+                console.debug && console.debug('handleTelegramAuth user:', user);
+            }
             telegramUser = user;
-        const label = user.username ? '@@' + user.username : user.first_name || 'Telegram пользователь';
-                    setStatus(`Подтверждён аккаунт ${label}. Теперь можно привязать.`, false);
-        };
+            telegramConfirmed = true;
+
+            const label = user.username ? '@@' + user.username : user.first_name || 'Telegram пользователь';
+            setStatus(`Подтверждён аккаунт ${label}. Теперь можно привязать.`, false);
+
+            if (tgStatusIcon) {
+                tgStatusIcon.classList.remove('border-slate-500', 'text-transparent');
+                tgStatusIcon.classList.add('bg-emerald-500', 'text-slate-900', 'border-emerald-500');
+            }
+
+            updateBindButtonState();
+        }
+
+        window.handleTelegramAuth = handleTelegramAuth;
+
+        if (Array.isArray(window.__telegramQueue) && window.__telegramQueue.length > 0) {
+            window.__telegramQueue.forEach((user) => handleTelegramAuth(user));
+            window.__telegramQueue = [];
+        }
+
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                setStatus(
+                    telegramConfirmed
+                        ? 'Telegram подтверждён. Можно привязать аккаунт.'
+                        : 'Telegram пока не подтверждён.',
+                    false
+                );
+                updateBindButtonState();
+            });
+        }
 
         async function submitTelegramBind(event) {
             event.preventDefault();
+
             if (!telegramUser) {
                 setStatus('Сначала подтвердите вход через Telegram.', true);
                 return;
@@ -93,6 +173,7 @@
 
             bindButton.disabled = true;
             setStatus('Выполняем привязку...', false);
+
             try {
                 const payload = {
                     id: telegramUser.id,
@@ -105,6 +186,10 @@
                     password
                 };
 
+                if (shouldLog) {
+                    console.log('Submitting payload:', payload);
+                }
+
                 const response = await fetch('/api/telegram/bind', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -112,16 +197,28 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (shouldLog) {
+                    console.log('Response status:', response.status);
+                }
+
                 if (!response.ok) {
-                    const error = await response.json().catch(() => ({}));
+                    const text = await response.text();
+                    console.log('Response body:', text);
+
+                    let error = {};
+                    try {
+                        error = JSON.parse(text);
+                    } catch { }
+
                     throw new Error(error.detail || 'Не удалось привязать Telegram');
                 }
 
-                window.location.href = '@Model.SafeReturnUrl';
+                window.location.href = safeReturnUrl;
             } catch (error) {
+                console.error('Bind error:', error);
                 setStatus(error.message || 'Произошла ошибка', true);
             } finally {
-                bindButton.disabled = false;
+                updateBindButtonState();
             }
         }
     </script>

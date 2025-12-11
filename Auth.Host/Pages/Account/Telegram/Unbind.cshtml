@@ -1,0 +1,68 @@
+@page
+@model Auth.Host.Pages.Account.Telegram.UnbindModel
+@{
+    ViewData["Title"] = "Отвязка Telegram";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Ava Auth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="min-h-screen flex items-center justify-center py-10 px-6">
+        <div class="w-full max-w-xl bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+            <div class="mb-6 text-center">
+                <h1 class="text-3xl font-semibold">Отвязка Telegram</h1>
+                <p class="text-sm text-slate-400 mt-2">Введите пароль, чтобы подтвердить отключение Telegram.</p>
+            </div>
+            <form method="post" class="space-y-4" id="unbind-form">
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.ReturnUrl)
+                <div>
+                    <label class="text-sm font-medium text-slate-300">Пароль</label>
+                    <input
+                        asp-for="Password"
+                        name="Password"
+                        id="Password"
+                        type="password"
+                        class="mt-1 w-full px-4 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        placeholder="Введите пароль"
+                    />
+                    <span class="text-xs text-slate-500 mt-1 block">Пароль нужен для подтверждения прав.</span>
+                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-sm text-red-400 mt-1" })
+                </div>
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
+                        @Model.ErrorMessage
+                    </div>
+                }
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30">
+                    Отвязать Telegram
+                </button>
+                <p class="text-center text-xs text-slate-400">
+                    После успешной отвязки вы вернётесь на страницу входа.
+                </p>
+            </form>
+        </div>
+    </div>
+    <script>
+        const passwordInput = document.querySelector('#unbind-form input[name="Password"]');
+        const validationSpan = document.querySelector('#unbind-form [data-valmsg-for="Password"]');
+
+        document.getElementById('unbind-form')?.addEventListener('submit', (event) => {
+            if (passwordInput && passwordInput.value.trim().length === 0) {
+                if (validationSpan) {
+                    validationSpan.textContent = 'Пароль обязателен';
+                }
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

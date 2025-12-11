@@ -142,11 +142,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 if (forwardedOptions is not null)
 {
     app.UseForwardedHeaders(forwardedOptions);
 }
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("ClientOrigins");
