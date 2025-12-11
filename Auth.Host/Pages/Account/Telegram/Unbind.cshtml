@@ -23,6 +23,7 @@
             <form method="post" class="space-y-4" id="unbind-form">
                 @Html.AntiForgeryToken()
                 @Html.HiddenFor(m => m.ReturnUrl)
+                @Html.HiddenFor(m => m.ClientId)
                 <div>
                     <label class="text-sm font-medium text-slate-300">Пароль</label>
                     <input

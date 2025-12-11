@@ -111,7 +111,11 @@ builder.Services.AddSingleton<AuthorizationCodeStore>();
 
 var forwardedOptions = BuildForwardedHeadersOptions(builder.Configuration);
 var clientOrigins = GetClientOrigins(builder.Configuration);
-builder.Services.AddSingleton(new RedirectUrlPolicy(clientOrigins));
+builder.Services.AddSingleton<RedirectUrlPolicy>(sp =>
+{
+    var clients = sp.GetRequiredService<ClientRegistry>();
+    return new RedirectUrlPolicy(clientOrigins, clients);
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

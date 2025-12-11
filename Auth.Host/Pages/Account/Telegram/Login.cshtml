@@ -30,6 +30,7 @@
             {
                 <form id="telegram-form" method="post" class="space-y-4">
                     @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ClientId" />
                     <input type="hidden" id="tg-id" name="id" />
                     <input type="hidden" id="tg-first-name" name="first_name" />
                     <input type="hidden" id="tg-last-name" name="last_name" />
