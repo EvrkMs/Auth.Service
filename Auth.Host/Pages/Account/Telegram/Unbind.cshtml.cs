@@ -1,4 +1,5 @@
 using Auth.Domain.Entity;
+using Auth.Host.Services;
 using Auth.Telegram;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,12 +15,18 @@ public sealed class UnbindModel : PageModel
 {
     private readonly UserManager<Employee> _userManager;
     private readonly TelegramBindingService _bindingService;
+    private readonly RedirectUrlPolicy _redirectPolicy;
     private readonly ILogger<UnbindModel> _logger;
 
-    public UnbindModel(UserManager<Employee> userManager, TelegramBindingService bindingService, ILogger<UnbindModel> logger)
+    public UnbindModel(
+        UserManager<Employee> userManager,
+        TelegramBindingService bindingService,
+        RedirectUrlPolicy redirectPolicy,
+        ILogger<UnbindModel> logger)
     {
         _userManager = userManager;
         _bindingService = bindingService;
+        _redirectPolicy = redirectPolicy;
         _logger = logger;
     }
 
@@ -29,7 +36,8 @@ public sealed class UnbindModel : PageModel
     [BindProperty, Required(ErrorMessage = "Пароль обязателен"), DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
 
-    public string SafeReturnUrl => GetSafeReturnUrl(ReturnUrl);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetSafeReturnUrl(Url, ReturnUrl);
+    public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public string? ErrorMessage { get; private set; }
 
@@ -79,7 +87,9 @@ public sealed class UnbindModel : PageModel
         try
         {
             await _bindingService.UnbindAsync(user, new TelegramUnbindCommand(Password), cancellationToken);
-            return LocalRedirect(SafeReturnUrl);
+            return SafeReturnUrlInfo.IsLocal
+                ? LocalRedirect(SafeReturnUrlInfo.Url)
+                : Redirect(SafeReturnUrlInfo.Url);
         }
         catch (TelegramBindingException ex)
         {
@@ -88,13 +98,4 @@ public sealed class UnbindModel : PageModel
         }
     }
 
-    private string GetSafeReturnUrl(string? returnUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return returnUrl;
-        }
-
-        return Url.Content("~/") ?? "/";
-    }
 }

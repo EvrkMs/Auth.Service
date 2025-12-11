@@ -110,15 +110,16 @@ builder.Services.AddSingleton<ClientRegistry>();
 builder.Services.AddSingleton<AuthorizationCodeStore>();
 
 var forwardedOptions = BuildForwardedHeadersOptions(builder.Configuration);
+var clientOrigins = GetClientOrigins(builder.Configuration);
+builder.Services.AddSingleton(new RedirectUrlPolicy(clientOrigins));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
 {
-    var origins = GetClientOrigins(builder.Configuration);
     options.AddPolicy("ClientOrigins", policy =>
     {
-        policy.WithOrigins(origins)
+        policy.WithOrigins(clientOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

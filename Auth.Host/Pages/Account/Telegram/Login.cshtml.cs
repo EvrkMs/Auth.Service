@@ -1,4 +1,5 @@
 using Auth.Domain.Entity;
+using Auth.Host.Services;
 using Auth.Telegram;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,15 +15,18 @@ public sealed class LoginModel : PageModel
     private readonly TelegramBindingService _bindingService;
     private readonly SignInManager<Employee> _signInManager;
     private readonly TelegramOptions _options;
+    private readonly RedirectUrlPolicy _redirectPolicy;
 
     public LoginModel(
         TelegramBindingService bindingService,
         SignInManager<Employee> signInManager,
-        IOptions<TelegramOptions> options)
+        IOptions<TelegramOptions> options,
+        RedirectUrlPolicy redirectPolicy)
     {
         _bindingService = bindingService;
         _signInManager = signInManager;
         _options = options.Value;
+        _redirectPolicy = redirectPolicy;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -51,7 +55,8 @@ public sealed class LoginModel : PageModel
 
     public string? BotUsername => string.IsNullOrWhiteSpace(_options.BotUsername) ? null : _options.BotUsername;
 
-    public string SafeReturnUrl => GetSafeReturnUrl(ReturnUrl);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetSafeReturnUrl(Url, ReturnUrl);
+    public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public string? ErrorMessage { get; private set; }
 
@@ -98,7 +103,9 @@ public sealed class LoginModel : PageModel
             }
 
             await _signInManager.SignInAsync(user, isPersistent: false);
-            return LocalRedirect(SafeReturnUrl);
+            return SafeReturnUrlInfo.IsLocal
+                ? LocalRedirect(SafeReturnUrlInfo.Url)
+                : Redirect(SafeReturnUrlInfo.Url);
         }
         catch (TelegramValidationException ex)
         {
@@ -107,13 +114,4 @@ public sealed class LoginModel : PageModel
         }
     }
 
-    private string GetSafeReturnUrl(string? returnUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return returnUrl;
-        }
-
-        return Url.Content("~/") ?? "/";
-    }
 }

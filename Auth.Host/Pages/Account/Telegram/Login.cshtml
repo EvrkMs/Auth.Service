@@ -48,11 +48,17 @@
                     }
 
                     <div class="flex justify-center">
+                        <script data-cfasync="false">
+                            window.__telegramLoginQueue = window.__telegramLoginQueue || [];
+                            window.handleTelegramLogin = function (user) {
+                                window.__telegramLoginQueue.push(user);
+                            };
+                        </script>
                         <script async src="https://telegram.org/js/telegram-widget.js?22"
                                 data-telegram-login="@Model.BotUsername"
                                 data-size="large"
                                 data-request-access="write"
-                                data-onauth="handleTelegramLogin"></script>
+                                data-onauth="handleTelegramLogin(user)"></script>
                     </div>
 
                     <p class="text-sm text-slate-400 text-center">После подтверждения Telegram вход будет выполнен автоматически.</p>
@@ -85,6 +91,11 @@
             document.getElementById('tg-hash').value = user.hash || '';
 
             document.getElementById('telegram-form').submit();
+        }
+
+        if (Array.isArray(window.__telegramLoginQueue) && window.__telegramLoginQueue.length > 0) {
+            window.__telegramLoginQueue.forEach((user) => window.handleTelegramLogin(user));
+            window.__telegramLoginQueue = [];
         }
     </script>
 </body>

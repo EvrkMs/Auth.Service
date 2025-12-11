@@ -1,3 +1,4 @@
+using Auth.Host.Services;
 using Auth.Telegram;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,12 @@ namespace Auth.Host.Pages.Account.Telegram;
 public sealed class BindModel : PageModel
 {
     private readonly TelegramOptions _options;
+    private readonly RedirectUrlPolicy _redirectPolicy;
 
-    public BindModel(IOptions<TelegramOptions> options)
+    public BindModel(IOptions<TelegramOptions> options, RedirectUrlPolicy redirectPolicy)
     {
         _options = options.Value;
+        _redirectPolicy = redirectPolicy;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -21,19 +24,11 @@ public sealed class BindModel : PageModel
 
     public string? BotUsername => string.IsNullOrWhiteSpace(_options.BotUsername) ? null : _options.BotUsername;
 
-    public string SafeReturnUrl => GetSafeReturnUrl(ReturnUrl);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetSafeReturnUrl(Url, ReturnUrl);
+    public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public void OnGet()
     {
     }
 
-    private string GetSafeReturnUrl(string? returnUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return returnUrl;
-        }
-
-        return Url.Content("~/") ?? "/";
-    }
 }
