@@ -81,13 +81,6 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
-        var validation = _redirectPolicy.ValidateClientReturnUrl(ClientId, ReturnUrl);
-        if (!validation.IsValid)
-        {
-            ErrorMessage = validation.Error ?? "Недопустимый returnUrl или client_id.";
-            return Page();
-        }
-
         try
         {
             var data = new TelegramAuthData(
@@ -113,9 +106,10 @@ public sealed class LoginModel : PageModel
             }
 
             await _signInManager.SignInAsync(user, isPersistent: false);
-            return validation.SafeReturnUrl!.IsLocal
-                ? LocalRedirect(validation.SafeReturnUrl.Url)
-                : Redirect(validation.SafeReturnUrl.Url);
+            var target = SafeReturnUrlInfo;
+            return target.IsLocal
+                ? LocalRedirect(target.Url)
+                : Redirect(target.Url);
         }
         catch (TelegramValidationException ex)
         {

@@ -157,6 +157,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
+
 if (forwardedOptions is not null)
 {
     app.UseForwardedHeaders(forwardedOptions);
