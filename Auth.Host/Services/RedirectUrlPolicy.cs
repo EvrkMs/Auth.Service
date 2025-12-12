@@ -34,49 +34,42 @@ public sealed class RedirectUrlPolicy
         return new SafeReturnUrlResult(fallback, true);
     }
 
-    public SafeReturnUrlResult GetTelegramReturnUrl(IUrlHelper? urlHelper, string? returnUrl, string? clientId)
+    public RedirectValidationResult ValidateClientReturnUrl(string? clientId, string? returnUrl)
     {
-        if (!string.IsNullOrWhiteSpace(clientId) && TryResolveClientUrl(clientId, returnUrl, out var resolvedUrl, out _))
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(returnUrl))
         {
-            return new SafeReturnUrlResult(resolvedUrl, false);
+            return RedirectValidationResult.Invalid("ClientId или returnUrl не заданы.");
         }
 
-        return GetSafeReturnUrl(urlHelper, returnUrl);
-    }
-
-    public bool IsTelegramReturnUrlAllowed(string? returnUrl, string? clientId)
-    {
-        return !string.IsNullOrWhiteSpace(clientId) &&
-               !string.IsNullOrWhiteSpace(returnUrl) &&
-               TryResolveClientUrl(clientId, returnUrl, out _, out var accepted) &&
-               accepted;
-    }
-
-    private bool TryResolveClientUrl(string clientId, string? returnUrl, out string resolvedUrl, out bool accepted)
-    {
-        resolvedUrl = string.Empty;
-        accepted = false;
         var client = _clients.Find(clientId);
         if (client is null)
         {
-            return false;
+            return RedirectValidationResult.Invalid("Клиент не найден.");
         }
 
         var expectedRedirect = client.RedirectUri;
         var expectedLogout = client.PostLogoutRedirectUri;
 
-        if (!string.IsNullOrWhiteSpace(returnUrl) &&
-            (string.Equals(returnUrl, expectedRedirect, StringComparison.Ordinal) ||
-             (!string.IsNullOrWhiteSpace(expectedLogout) && string.Equals(returnUrl, expectedLogout, StringComparison.Ordinal))))
+        if (string.Equals(returnUrl, expectedRedirect, StringComparison.Ordinal) ||
+            (!string.IsNullOrWhiteSpace(expectedLogout) && string.Equals(returnUrl, expectedLogout, StringComparison.Ordinal)))
         {
-            resolvedUrl = returnUrl;
-            accepted = true;
-            return true;
+            return RedirectValidationResult.Valid(new SafeReturnUrlResult(returnUrl, false));
         }
 
-        resolvedUrl = client.RedirectUri;
-        return true;
+        return RedirectValidationResult.Invalid("Недопустимый returnUrl для клиента.");
+    }
+
+    public SafeReturnUrlResult ResolveReturnUrl(IUrlHelper? urlHelper, string? returnUrl, string? clientId)
+    {
+        var validation = ValidateClientReturnUrl(clientId, returnUrl);
+        return validation.IsValid ? validation.SafeReturnUrl! : GetSafeReturnUrl(urlHelper, returnUrl);
     }
 }
 
 public sealed record SafeReturnUrlResult(string Url, bool IsLocal);
+
+public sealed record RedirectValidationResult(bool IsValid, string? Error, SafeReturnUrlResult? SafeReturnUrl)
+{
+    public static RedirectValidationResult Valid(SafeReturnUrlResult result) => new(true, null, result);
+    public static RedirectValidationResult Invalid(string error) => new(false, error, null);
+}

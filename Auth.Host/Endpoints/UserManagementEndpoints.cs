@@ -1,6 +1,7 @@
 using Auth.Domain.Entity;
 using Auth.Host.Models.Roles;
 using Auth.Host.Models.Users;
+using Auth.Host.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,17 +19,17 @@ public static class UserManagementEndpoints
 
         users.MapGet("/", GetUsersAsync);
         users.MapGet("/{id:guid}", GetUserAsync);
-        users.MapPost("/", CreateUserAsync);
-        users.MapPut("/{id:guid}", UpdateUserAsync);
-        users.MapPost("/{id:guid}/password", ResetPasswordAsync);
+        users.MapPost("/", CreateUserAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        users.MapPut("/{id:guid}", UpdateUserAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        users.MapPost("/{id:guid}/password", ResetPasswordAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
 
         var roles = users.MapGroup("/roles")
             .RequireAuthorization(policy => policy.RequireRole("root"));
 
         roles.MapGet("/", GetRolesAsync);
-        roles.MapPost("/", CreateRoleAsync);
-        roles.MapPut("/{id}", UpdateRoleAsync);
-        roles.MapDelete("/{id}", DeleteRoleAsync);
+        roles.MapPost("/", CreateRoleAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        roles.MapPut("/{id}", UpdateRoleAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        roles.MapDelete("/{id}", DeleteRoleAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
 
         return app;
     }

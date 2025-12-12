@@ -4,6 +4,7 @@ using System.Linq;
 using Auth.Application.Sessions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
+using Auth.Host.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -27,8 +28,15 @@ public static class TokenEndpoints
         UserManager<Employee> userManager,
         ISessionRepository sessionRepository,
         TokenService tokenService,
+        ClientRegistry clients,
         CancellationToken cancellationToken)
     {
+        var clientValidation = ClientValidationHelper.Validate(clients, request.ClientId, request.ClientSecret);
+        if (!clientValidation.IsValid)
+        {
+            return Results.BadRequest(new { error = "invalid_client" });
+        }
+
         var employee = await userManager.FindByIdAsync(request.EmployeeId.ToString());
         if (employee is null)
         {
@@ -67,8 +75,15 @@ public static class TokenEndpoints
         RefreshTokenDto request,
         UserManager<Employee> userManager,
         TokenRefreshService refreshService,
+        ClientRegistry clients,
         CancellationToken cancellationToken)
     {
+        var clientValidation = ClientValidationHelper.Validate(clients, request.ClientId, request.ClientSecret);
+        if (!clientValidation.IsValid)
+        {
+            return Results.BadRequest(new { error = "invalid_client" });
+        }
+
         var employee = await userManager.FindByIdAsync(request.EmployeeId.ToString());
         if (employee is null)
         {
@@ -94,11 +109,12 @@ public static class TokenEndpoints
     public sealed record IssueTokenDto(
         Guid EmployeeId,
         string ClientId,
+        string? ClientSecret,
         Guid? SessionId,
         List<string>? Scopes,
         bool IncludeRefreshToken = true);
 
-    public sealed record RefreshTokenDto(Guid EmployeeId, string RefreshToken);
+    public sealed record RefreshTokenDto(Guid EmployeeId, string ClientId, string? ClientSecret, string RefreshToken);
 
     public sealed record IssueTokenResponse(
         string AccessToken,

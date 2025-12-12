@@ -152,13 +152,14 @@ public static class ConnectEndpoints
         ISessionRepository sessionRepository,
         TokenService tokenService,
         TokenRefreshService refreshService,
+        ClientRegistry clients,
         OidcIdTokenFactory idTokenFactory)
     {
         var form = await httpContext.Request.ReadFormAsync();
         var grantType = form["grant_type"].ToString();
         if (string.Equals(grantType, "refresh_token", StringComparison.OrdinalIgnoreCase))
         {
-            return await HandleRefreshGrantAsync(httpContext, form, refreshService);
+            return await HandleRefreshGrantAsync(httpContext, form, refreshService, clients);
         }
 
         if (!string.Equals(grantType, "authorization_code", StringComparison.OrdinalIgnoreCase))
@@ -170,6 +171,13 @@ public static class ConnectEndpoints
         var redirectUri = form["redirect_uri"].ToString();
         var clientId = form["client_id"].ToString();
         var codeVerifier = form["code_verifier"].ToString();
+
+        var providedSecret = ResolveClientSecret(httpContext.Request, form);
+        var clientValidation = ClientValidationHelper.Validate(clients, clientId, providedSecret);
+        if (!clientValidation.IsValid)
+        {
+            return Results.BadRequest(new { error = "invalid_client" });
+        }
 
         var entry = await codeStore.TryRedeemAsync(code);
         if (entry is null)
@@ -216,23 +224,14 @@ public static class ConnectEndpoints
             idToken = await idTokenFactory.CreateAsync(user, session, clientId, entry.Nonce, httpContext.RequestAborted);
         }
 
-        var scopeString = string.Join(' ', result.Scopes);
-        return Results.Json(new
-        {
-            access_token = result.AccessToken.Value,
-            expires_in = (int)(result.AccessToken.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds,
-            token_type = "Bearer",
-            refresh_token = includeRefresh ? result.RefreshToken?.Value : null,
-            refresh_token_expires_at = includeRefresh ? result.RefreshToken?.ExpiresAt : null,
-            scope = scopeString,
-            id_token = idToken
-        });
+        return Results.Json(TokenResponseHelper.BuildSuccess(result, idToken));
     }
 
     private static async Task<IResult> HandleRefreshGrantAsync(
         HttpContext httpContext,
         IFormCollection form,
-        TokenRefreshService refreshService)
+        TokenRefreshService refreshService,
+        ClientRegistry clients)
     {
         var refreshToken = form["refresh_token"].ToString();
         if (string.IsNullOrWhiteSpace(refreshToken))
@@ -240,19 +239,18 @@ public static class ConnectEndpoints
             return Results.BadRequest(new { error = "invalid_request", error_description = "Missing refresh_token" });
         }
 
+        var clientId = form["client_id"].ToString();
+        var providedSecret = ResolveClientSecret(httpContext.Request, form);
+        var clientValidation = ClientValidationHelper.Validate(clients, clientId, providedSecret);
+        if (!clientValidation.IsValid)
+        {
+            return Results.BadRequest(new { error = "invalid_client" });
+        }
+
         try
         {
             var result = await refreshService.RefreshAsync(refreshToken, cancellationToken: httpContext.RequestAborted);
-            var scopeString = string.Join(' ', result.Scopes);
-            return Results.Json(new
-            {
-                access_token = result.AccessToken.Value,
-                expires_in = (int)(result.AccessToken.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds,
-                token_type = "Bearer",
-                refresh_token = result.RefreshToken?.Value,
-                refresh_token_expires_at = result.RefreshToken?.ExpiresAt,
-                scope = scopeString
-            });
+            return Results.Json(TokenResponseHelper.BuildSuccess(result));
         }
         catch (Exception ex)
         {
@@ -365,6 +363,9 @@ public static class ConnectEndpoints
         return QueryHelpers.AddQueryString(uri, filtered);
     }
 
+    private static ClientValidationResult ValidateClientSecret(HttpRequest request, IFormCollection form, ClientRegistry clients, string clientId) =>
+        ClientValidationHelper.Validate(clients, clientId, ResolveClientSecret(request, form));
+
     public sealed record AuthorizeRequest
     {
         [FromQuery(Name = "response_type")]
@@ -463,7 +464,7 @@ public static class ConnectEndpoints
         var options = new CookieOptions
         {
             HttpOnly = true,
-            Secure = context.Request.IsHttps,
+            Secure = true,
             SameSite = SameSiteMode.Strict,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(30)
@@ -585,6 +586,31 @@ public static class ConnectEndpoints
         }
 
         return null;
+    }
+
+    private static string? ResolveClientSecret(HttpRequest request, IFormCollection form)
+    {
+        var header = request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(header) && header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var encoded = header["Basic ".Length..].Trim();
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+                var parts = decoded.Split(':', 2);
+                if (parts.Length == 2)
+                {
+                    return parts[1];
+                }
+            }
+            catch
+            {
+                // ignore malformed header
+            }
+        }
+
+        var secret = form["client_secret"].ToString();
+        return string.IsNullOrWhiteSpace(secret) ? null : secret;
     }
 
 }

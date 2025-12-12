@@ -58,7 +58,7 @@ public sealed class LoginModel : PageModel
 
     public string? BotUsername => string.IsNullOrWhiteSpace(_options.BotUsername) ? null : _options.BotUsername;
 
-    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetTelegramReturnUrl(Url, ReturnUrl, ClientId);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.ResolveReturnUrl(Url, ReturnUrl, ClientId);
     public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public string? ErrorMessage { get; private set; }
@@ -78,6 +78,13 @@ public sealed class LoginModel : PageModel
         if (TelegramId <= 0 || string.IsNullOrWhiteSpace(Hash))
         {
             ErrorMessage = "Не удалось получить данные Telegram.";
+            return Page();
+        }
+
+        var validation = _redirectPolicy.ValidateClientReturnUrl(ClientId, ReturnUrl);
+        if (!validation.IsValid)
+        {
+            ErrorMessage = validation.Error ?? "Недопустимый returnUrl или client_id.";
             return Page();
         }
 
@@ -106,9 +113,9 @@ public sealed class LoginModel : PageModel
             }
 
             await _signInManager.SignInAsync(user, isPersistent: false);
-            return SafeReturnUrlInfo.IsLocal
-                ? LocalRedirect(SafeReturnUrlInfo.Url)
-                : Redirect(SafeReturnUrlInfo.Url);
+            return validation.SafeReturnUrl!.IsLocal
+                ? LocalRedirect(validation.SafeReturnUrl.Url)
+                : Redirect(validation.SafeReturnUrl.Url);
         }
         catch (TelegramValidationException ex)
         {

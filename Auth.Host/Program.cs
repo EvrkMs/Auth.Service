@@ -87,6 +87,8 @@ builder.Services.ConfigureApplicationCookie(options =>
         context.Response.Redirect(context.RedirectUri);
         return Task.CompletedTask;
     };
+
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 builder.Services.AddAuthentication(options =>
@@ -98,6 +100,14 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddRazorPages();
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "__Host-af";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // Antiforgery cookie должен ходить между поддоменами, поэтому SameSite=None при сохранении Secure
+    options.Cookie.SameSite = SameSiteMode.None;
+});
 
 builder.Services.AddAuthInfrastructure(options =>
 {
@@ -166,6 +176,7 @@ app.MapSessionsEndpoints();
 app.MapUserManagementEndpoints();
 app.MapOidcEndpoints();
 app.MapTelegramEndpoints();
+app.MapAntiforgeryEndpoints();
 
 app.Run();
 
@@ -283,12 +294,14 @@ static bool ShouldReturnApiStatus(HttpRequest request)
     }
 
     if (request.Headers.TryGetValue("Accept", out var accept) &&
+        !Microsoft.Extensions.Primitives.StringValues.IsNullOrEmpty(accept) &&
         accept.Any(value => value.Contains("application/json", StringComparison.OrdinalIgnoreCase)))
     {
         return true;
     }
 
     if (request.Headers.TryGetValue("X-Requested-With", out var requestedWith) &&
+        !Microsoft.Extensions.Primitives.StringValues.IsNullOrEmpty(requestedWith) &&
         requestedWith.Any(value => value.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase)))
     {
         return true;

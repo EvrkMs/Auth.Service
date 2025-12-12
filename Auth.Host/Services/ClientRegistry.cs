@@ -23,7 +23,8 @@ public sealed class ClientRegistry
                     DisplayName = child["DisplayName"] ?? child.Key,
                     RedirectUri = child["RedirectUri"] ?? string.Empty,
                     AllowedScopes = child["Scopes"]?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>(),
-                    PostLogoutRedirectUri = child["PostLogoutRedirectUri"]
+                    PostLogoutRedirectUri = child["PostLogoutRedirectUri"],
+                    ClientSecret = child["ClientSecret"] ?? child["Secret"]
                 };
 
                 registration.PostLogoutRedirectUri ??= registration.RedirectUri;
@@ -82,4 +83,6 @@ public sealed class ClientRegistration
     public IReadOnlyCollection<string> AllowedScopes { get; init; } = Array.Empty<string>();
 
     public string? PostLogoutRedirectUri { get; set; }
+
+    public string? ClientSecret { get; init; }
 }

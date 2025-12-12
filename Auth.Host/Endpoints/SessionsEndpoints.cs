@@ -3,6 +3,7 @@ using Auth.Application.Tokens;
 using Auth.Domain.Entity;
 using Auth.Host.Models.Sessions;
 using Auth.Host.Sessions;
+using Auth.Host.Filters;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -19,8 +20,8 @@ public static class SessionsEndpoints
 
         group.MapGet("/", GetSessionsAsync);
         group.MapGet("/current", GetCurrentSessionAsync);
-        group.MapPost("/{id:guid}/revoke", RevokeSessionAsync);
-        group.MapPost("/revoke-all", RevokeAllSessionsAsync);
+        group.MapPost("/{id:guid}/revoke", RevokeSessionAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        group.MapPost("/revoke-all", RevokeAllSessionsAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
 
         return app;
     }

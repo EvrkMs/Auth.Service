@@ -12,80 +12,280 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Ava Auth</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: rgba(15, 23, 42, 0.85);
+            --panel-border: #1f2937;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #a855f7;
+            --accent-2: #ec4899;
+            --error-bg: rgba(239, 68, 68, 0.1);
+            --error-border: rgba(239, 68, 68, 0.4);
+            --error-text: #fca5a5;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .layout {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 640px;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .heading {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .alert-warning {
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            color: #facc15;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #1f2937;
+            background: rgba(30, 41, 59, 0.7);
+            color: var(--text);
+        }
+
+        .hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .step {
+            font-size: 14px;
+            color: #cbd5e1;
+            margin: 0 0 10px;
+        }
+
+        .status-card {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .status-icon {
+            margin-top: 4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            border: 1px solid #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: transparent;
+        }
+
+        .status-icon.success {
+            background: var(--success);
+            border-color: var(--success);
+            color: #0f172a;
+        }
+
+        .status-text {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .status-text.error {
+            color: var(--error-text);
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 12px 40px rgba(168, 85, 247, 0.35);
+            transition: transform 0.08s ease, opacity 0.08s ease;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:not(:disabled):active {
+            transform: translateY(1px);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            font-size: 14px;
+            color: var(--muted);
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        .telegram-widget {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-    <div class="min-h-screen flex items-center justify-center py-10 px-6">
-        <div class="w-full max-w-xl bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-            <div class="mb-6 text-center">
-                <h1 class="text-3xl font-semibold">Привязка Telegram</h1>
-                <p class="text-sm text-slate-400 mt-2">
+<body>
+    <div class="layout">
+        <div class="panel">
+            <div class="heading">
+                <h1 class="title">Привязка Telegram</h1>
+                <p class="subtitle">
                     Подтвердите пароль и авторизуйтесь через Telegram, чтобы связать аккаунт
                 </p>
             </div>
 
             @if (string.IsNullOrWhiteSpace(Model.BotUsername))
             {
-                <div class="bg-red-500/10 border border-red-500/40 text-red-200 text-sm rounded-xl px-4 py-3">
+                <div class="alert-error">
                     Telegram-бот не настроен. Обратитесь к администратору.
                 </div>
             }
             else
             {
-                <form class="space-y-6" onsubmit="submitTelegramBind(event)">
+                <form class="form" onsubmit="submitTelegramBind(event)">
+                    @Html.AntiForgeryToken()
                     <div>
-                        <label class="text-sm font-medium text-slate-300">Пароль</label>
+                        <label>Пароль</label>
                         <input id="password-input"
                                type="password"
-                               class="mt-1 w-full px-4 py-3 bg-slate-800/70 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                               class="input"
                                placeholder="Введите пароль"
                                required />
-                        <p class="text-xs text-slate-400 mt-1">
+                        <p class="hint">
                             Пароль требуется для подтверждения привязки.
                         </p>
                     </div>
 
             <div>
-                <p class="text-sm text-slate-300 mb-3">1. Авторизуйтесь через Telegram:</p>
-                <div class="flex justify-center" id="telegram-widget">
+                <p class="step">1. Авторизуйтесь через Telegram:</p>
+                <div class="telegram-widget" id="telegram-widget">
                     <script data-cfasync="false">
                         window.__telegramQueue = window.__telegramQueue || [];
                         window.handleTelegramAuth = function (user) {
                             window.__telegramQueue.push(user);
+                        };
+                        window.handleTelegramWidgetLoaded = function () {
+                            window.__telegramWidgetLoaded = true;
+                        };
+                        window.handleTelegramWidgetError = function () {
+                            window.__telegramWidgetError = true;
                         };
                     </script>
                     <script data-cfasync="false" async src="https://telegram.org/js/telegram-widget.js?22"
                             data-telegram-login="@Model.BotUsername"
                             data-size="large"
                             data-request-access="write"
-                            data-onauth="handleTelegramAuth(user)"></script>
+                            data-onauth="handleTelegramAuth(user)"
+                            onload="handleTelegramWidgetLoaded()"
+                            onerror="handleTelegramWidgetError()"></script>
+                </div>
+                <div id="widget-error" class="alert-warning" style="display:none; margin-top: 10px;">
+                    Не удалось загрузить виджет Telegram. Попробуйте отключить блокировщики или перейти напрямую: <a style="color: #fde68a;" href="https://t.me/@Model.BotUsername" target="_blank" rel="noopener">https://t.me/@Model.BotUsername</a>
                 </div>
             </div>
 
-                    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex items-start gap-3">
-                        <div id="tg-status-icon"
-                             class="mt-1 h-4 w-4 rounded-full border border-slate-500 flex items-center justify-center text-xs text-transparent">
-                            ✓
-                        </div>
+                    <div class="status-card">
+                        <div id="tg-status-icon" class="status-icon">✓</div>
                         <div>
-                            <p class="text-sm text-slate-300 mb-1">
+                            <p class="step" style="margin: 0 0 4px;">
                                 2. Нажмите «Привязать Telegram» после успешной авторизации.
                             </p>
-                            <p id="status" class="text-sm text-slate-400">
+                            <p id="status" class="status-text">
                                 Telegram пока не подтверждён.
                             </p>
                         </div>
                     </div>
 
-                    <div class="space-y-2">
-                        <button id="bind-button"
-                                type="submit"
-                                class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 font-semibold text-white shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled>
+                    <div class="actions">
+                        <button id="bind-button" type="submit" class="btn-primary" disabled>
                             Привязать Telegram
                         </button>
-                        <a class="block text-center text-sm text-slate-400 hover:text-white"
-                           href="@Model.SafeReturnUrl">
+                        <a class="back-link" href="@Model.SafeReturnUrl">
                             Вернуться назад
                         </a>
                     </div>
@@ -99,17 +299,46 @@
         const bindButton = document.getElementById('bind-button');
         const passwordInput = document.getElementById('password-input');
         const tgStatusIcon = document.getElementById('tg-status-icon');
+        const widgetErrorEl = document.getElementById('widget-error');
         const safeReturnUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SafeReturnUrl));
         const shouldLog = @(Env.IsDevelopment().ToString().ToLower());
+        const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
         let telegramUser = null;
         let telegramConfirmed = false;
+        let widgetTimeoutId = null;
+
+        if (widgetErrorEl && !widgetErrorEl.getAttribute('data-default-html')) {
+            widgetErrorEl.setAttribute('data-default-html', widgetErrorEl.innerHTML);
+        }
 
         function setStatus(message, isError = false) {
             if (!statusEl) return;
             statusEl.textContent = message;
-            statusEl.classList.toggle('text-red-300', isError);
-            statusEl.classList.toggle('text-slate-400', !isError);
+            statusEl.classList.toggle('error', isError);
+        }
+
+        function showWidgetError(message) {
+            if (!widgetErrorEl) return;
+            widgetErrorEl.style.display = 'block';
+            // сохраняем исходное содержимое (с ссылкой), если оно есть
+            const defaultHtml = widgetErrorEl.getAttribute('data-default-html');
+            widgetErrorEl.innerHTML = defaultHtml || message;
+            if (!defaultHtml) {
+                widgetErrorEl.textContent = message;
+            }
+        }
+
+        function scheduleWidgetTimeout() {
+            if (widgetTimeoutId) {
+                clearTimeout(widgetTimeoutId);
+            }
+            widgetTimeoutId = setTimeout(() => {
+                if (telegramConfirmed) return;
+                if (window.__telegramWidgetLoaded) return;
+                showWidgetError('Виджет Telegram не загрузился. Откройте бота напрямую или отключите блокировщики.');
+                setStatus('Виджет Telegram не загрузился. Попробуйте еще раз или откройте бота напрямую.', true);
+            }, 15000);
         }
 
         function updateBindButtonState() {
@@ -131,8 +360,7 @@
             setStatus(`Подтверждён аккаунт ${label}. Теперь можно привязать.`, false);
 
             if (tgStatusIcon) {
-                tgStatusIcon.classList.remove('border-slate-500', 'text-transparent');
-                tgStatusIcon.classList.add('bg-emerald-500', 'text-slate-900', 'border-emerald-500');
+                tgStatusIcon.classList.add('success');
             }
 
             updateBindButtonState();
@@ -143,6 +371,10 @@
         if (Array.isArray(window.__telegramQueue) && window.__telegramQueue.length > 0) {
             window.__telegramQueue.forEach((user) => handleTelegramAuth(user));
             window.__telegramQueue = [];
+        }
+
+        if (typeof window !== 'undefined') {
+            scheduleWidgetTimeout();
         }
 
         if (passwordInput) {
@@ -190,9 +422,14 @@
                     console.log('Submitting payload:', payload);
                 }
 
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) {
+                    headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+
                 const response = await fetch('/api/telegram/bind', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     credentials: 'include',
                     body: JSON.stringify(payload)
                 });

@@ -40,33 +40,35 @@ public sealed class UnbindModel : PageModel
     [BindProperty, Required(ErrorMessage = "Пароль обязателен"), DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
 
-    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetTelegramReturnUrl(Url, ReturnUrl, ClientId);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.ResolveReturnUrl(Url, ReturnUrl, ClientId);
     public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public string? ErrorMessage { get; private set; }
 
     public IActionResult OnGet()
     {
-        if (!IsReturnUrlValid())
+        if (!IsReturnUrlValid(out var error))
         {
-            _logger.LogWarning("Invalid Telegram unbind returnUrl={ReturnUrl} client_id={ClientId}", ReturnUrl, ClientId);
-            return BadRequest("Недопустимый returnUrl или client_id для Telegram-отвязки.");
+            _logger.LogWarning("Invalid Telegram unbind returnUrl={ReturnUrl} client_id={ClientId}: {Error}", ReturnUrl, ClientId, error);
+            return BadRequest(error ?? "Недопустимый returnUrl или client_id для Telegram-отвязки.");
         }
 
         return Page();
     }
 
-    private bool IsReturnUrlValid()
+    private bool IsReturnUrlValid(out string? error)
     {
-        return _redirectPolicy.IsTelegramReturnUrlAllowed(ReturnUrl, ClientId);
+        var validation = _redirectPolicy.ValidateClientReturnUrl(ClientId, ReturnUrl);
+        error = validation.Error;
+        return validation.IsValid;
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
-        if (!IsReturnUrlValid())
+        if (!IsReturnUrlValid(out var error))
         {
-            _logger.LogWarning("Invalid Telegram unbind returnUrl={ReturnUrl} client_id={ClientId}", ReturnUrl, ClientId);
-            return BadRequest("Недопустимый returnUrl или client_id для Telegram-отвязки.");
+            _logger.LogWarning("Invalid Telegram unbind returnUrl={ReturnUrl} client_id={ClientId}: {Error}", ReturnUrl, ClientId, error);
+            return BadRequest(error ?? "Недопустимый returnUrl или client_id для Telegram-отвязки.");
         }
 
         var user = await _userManager.GetUserAsync(User);
@@ -79,18 +81,10 @@ public sealed class UnbindModel : PageModel
             ? Password.Trim()
             : Request.Form["Password"].ToString();
 
-        if (Request.Form.ContainsKey("Password"))
-        {
-            var raw = Request.Form["Password"].ToString();
-            _logger.LogInformation("Raw form value for Password: '{Value}' (len {Length})", raw, raw.Length);
-        }
-
-        _logger.LogInformation("Form keys: {Keys}", string.Join(",", Request.Form.Keys));
-
         if (!ModelState.IsValid)
         {
             var errors = ModelState[nameof(Password)]?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>();
-            _logger.LogInformation("Telegram unbind validation failed; password errors: {Errors}; posted password length: {Length}", string.Join("; ", errors), providedPassword?.Length ?? 0);
+            _logger.LogInformation("Telegram unbind validation failed; password errors: {Errors}", string.Join("; ", errors));
             if (!ModelState.ContainsKey(nameof(Password)))
             {
                 ModelState.AddModelError(nameof(Password), "Пароль обязателен");

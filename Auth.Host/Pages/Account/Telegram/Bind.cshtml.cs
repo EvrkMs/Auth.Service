@@ -31,23 +31,25 @@ public sealed class BindModel : PageModel
 
     public string? BotUsername => string.IsNullOrWhiteSpace(_options.BotUsername) ? null : _options.BotUsername;
 
-    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.GetTelegramReturnUrl(Url, ReturnUrl, ClientId);
+    public SafeReturnUrlResult SafeReturnUrlInfo => _redirectPolicy.ResolveReturnUrl(Url, ReturnUrl, ClientId);
     public string SafeReturnUrl => SafeReturnUrlInfo.Url;
 
     public IActionResult OnGet()
     {
-        if (!IsReturnUrlValid())
+        if (!IsReturnUrlValid(out var error))
         {
-            _logger.LogWarning("Invalid Telegram bind returnUrl={ReturnUrl} client_id={ClientId}", ReturnUrl, ClientId);
-            return BadRequest("Недопустимый returnUrl или client_id для Telegram-связки.");
+            _logger.LogWarning("Invalid Telegram bind returnUrl={ReturnUrl} client_id={ClientId}: {Error}", ReturnUrl, ClientId, error);
+            return BadRequest(error ?? "Недопустимый returnUrl или client_id для Telegram-связки.");
         }
 
         return Page();
     }
 
-    private bool IsReturnUrlValid()
+    private bool IsReturnUrlValid(out string? error)
     {
-        return _redirectPolicy.IsTelegramReturnUrlAllowed(ReturnUrl, ClientId);
+        var validation = _redirectPolicy.ValidateClientReturnUrl(ClientId, ReturnUrl);
+        error = validation.Error;
+        return validation.IsValid;
     }
 
 }

@@ -3,6 +3,7 @@ using Auth.Host.Models.Telegram;
 using Auth.Telegram;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Auth.Host.Filters;
 
 namespace Auth.Host.Endpoints;
 
@@ -13,8 +14,8 @@ public static class TelegramEndpoints
         var group = app.MapGroup("/api/telegram").RequireAuthorization();
 
         group.MapGet("/me", GetTelegramProfileAsync);
-        group.MapPost("/bind", BindTelegramAsync);
-        group.MapPost("/unbind", UnbindTelegramAsync);
+        group.MapPost("/bind", BindTelegramAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        group.MapPost("/unbind", UnbindTelegramAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
 
         return app;
     }
