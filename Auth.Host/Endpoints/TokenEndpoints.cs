@@ -4,7 +4,9 @@ using System.Linq;
 using Auth.Application.Sessions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
+using Auth.Domain.Tokens;
 using Auth.Host.Services;
+using Auth.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +21,7 @@ public static class TokenEndpoints
 
         group.MapPost("/", IssueTokenAsync);
         group.MapPost("/refresh", RefreshTokenAsync);
+        group.MapPost("/introspect", IntrospectAsync);
 
         return app;
     }
@@ -106,6 +109,105 @@ public static class TokenEndpoints
         }
     }
 
+    private static async Task<IResult> IntrospectAsync(
+        HttpContext context,
+        ClientRegistry clients,
+        ITokenRepository tokenRepository,
+        ITokenValueGenerator tokenValueGenerator,
+        Auth.Application.Abstractions.ISystemClock clock)
+    {
+        var (tokenValue, hintedType, clientId, clientSecret) = await ParseIntrospectionRequestAsync(context);
+        if (string.IsNullOrWhiteSpace(tokenValue))
+        {
+            return Results.Json(new { active = false });
+        }
+
+        var clientValidation = ClientValidationHelper.Validate(clients, clientId, clientSecret);
+        if (!clientValidation.IsValid)
+        {
+            return Results.BadRequest(new { error = "invalid_client" });
+        }
+
+        var hash = tokenValueGenerator.ComputeHash(tokenValue);
+        var token = await tokenRepository.FindByHashAsync(hash, context.RequestAborted);
+        if (token is null || !token.IsActive(clock.UtcNow))
+        {
+            return Results.Json(new { active = false });
+        }
+
+        var response = new Dictionary<string, object?>
+        {
+            ["active"] = true,
+            ["client_id"] = token.ClientId,
+            ["token_type"] = token.Type == TokenType.Refresh ? "refresh_token" : "access_token",
+            ["aud"] = token.ClientId,
+            ["scope"] = token.Scopes,
+            ["exp"] = token.ExpiresAt.ToUnixTimeSeconds(),
+            ["iat"] = token.CreatedAt.ToUnixTimeSeconds(),
+            ["sub"] = token.EmployeeId.ToString(),
+        };
+
+        if (!string.IsNullOrEmpty(hintedType))
+        {
+            response["token_type_hint"] = hintedType;
+        }
+
+        if (!string.IsNullOrWhiteSpace(token.SessionHandleHash))
+        {
+            response["sid"] = token.SessionHandleHash;
+        }
+
+        return Results.Json(response);
+    }
+
+    private static async Task<(string Token, string? TokenTypeHint, string? ClientId, string? ClientSecret)> ParseIntrospectionRequestAsync(HttpContext context)
+    {
+        string tokenValue = string.Empty;
+        string? tokenTypeHint = null;
+        string? clientId = null;
+        string? clientSecret = null;
+
+        var header = context.Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(header) && header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var encoded = header["Basic ".Length..].Trim();
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+                var parts = decoded.Split(':', 2);
+                if (parts.Length == 2)
+                {
+                    clientId = parts[0];
+                    clientSecret = parts[1];
+                }
+            }
+            catch
+            {
+                // ignore malformed header
+            }
+        }
+
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(context.RequestAborted);
+            tokenValue = form["token"].ToString();
+            tokenTypeHint = form["token_type_hint"].ToString();
+            clientId ??= form["client_id"].ToString();
+            clientSecret ??= form["client_secret"].ToString();
+        }
+        else if (context.Request.ContentLength > 0 &&
+                 context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var body = await context.Request.ReadFromJsonAsync<IntrospectRequest>(cancellationToken: context.RequestAborted);
+            tokenValue = body?.Token ?? string.Empty;
+            tokenTypeHint = body?.TokenTypeHint;
+            clientId ??= body?.ClientId;
+            clientSecret ??= body?.ClientSecret;
+        }
+
+        return (tokenValue, tokenTypeHint, clientId, clientSecret);
+    }
+
     public sealed record IssueTokenDto(
         Guid EmployeeId,
         string ClientId,
@@ -122,4 +224,6 @@ public static class TokenEndpoints
         string? RefreshToken,
         DateTimeOffset? RefreshTokenExpiresAt,
         string RefreshTokenTransport);
+
+    public sealed record IntrospectRequest(string Token, string? ClientId, string? ClientSecret, string? TokenTypeHint);
 }

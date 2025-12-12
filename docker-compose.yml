@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - auth-network
+      - data-network
 
   auth-host:
     container_name: auth.service
@@ -27,6 +27,8 @@ services:
       - auth-keys:/app/keys
     networks:
       - auth-network
+      - data-network
+      - nginx_network
 
 volumes:
   auth-db-data:
@@ -36,3 +38,11 @@ networks:
   auth-network:
     driver: bridge
     name: auth-network
+
+  data-network:
+    name: data-network
+    driver: bridge
+
+  nginx_network:
+    external: true
+    driver: driver
