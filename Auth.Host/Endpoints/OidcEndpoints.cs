@@ -26,7 +26,7 @@ public static class OidcEndpoints
                 code_challenge_methods_supported = new[] { "S256" },
                 grant_types_supported = new[] { "authorization_code", "refresh_token", "client_credentials" },
                 token_endpoint_auth_methods_supported = new[] { "none", "client_secret_post", "client_secret_basic" },
-                scopes_supported = new[] { "openid", "profile", "offline_access" },
+                scopes_supported = new[] { "openid", "profile", "offline_access", "safe.read", "safe.write", "safe:read", "safe:write" },
                 claims_supported = new[] { "sub", "name", "preferred_username", "sid" }
             };
 

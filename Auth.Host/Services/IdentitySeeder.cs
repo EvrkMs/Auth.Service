@@ -12,6 +12,7 @@ public sealed class IdentitySeeder
     private readonly IConfiguration _configuration;
 
     private const string RootRoleName = "root";
+    private const string SafeManagerRoleName = "SafeManager";
     private const string DefaultUserName = "root@ava";
     private const string DefaultDisplayName = "Root";
     private const string DefaultPassword = "ChangeMe_!123";
@@ -31,6 +32,7 @@ public sealed class IdentitySeeder
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         await EnsureRoleAsync(RootRoleName, cancellationToken);
+        await EnsureRoleAsync(SafeManagerRoleName, cancellationToken);
         await EnsureRootUserAsync(cancellationToken);
     }
 

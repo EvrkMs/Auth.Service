@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -153,13 +155,16 @@ public static class ConnectEndpoints
         TokenService tokenService,
         TokenRefreshService refreshService,
         ClientRegistry clients,
-        OidcIdTokenFactory idTokenFactory)
+        OidcIdTokenFactory idTokenFactory,
+        IHostEnvironment environment,
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("Auth.ConnectEndpoints");
         var form = await httpContext.Request.ReadFormAsync();
         var grantType = form["grant_type"].ToString();
         if (string.Equals(grantType, "refresh_token", StringComparison.OrdinalIgnoreCase))
         {
-            return await HandleRefreshGrantAsync(httpContext, form, refreshService, clients);
+            return await HandleRefreshGrantAsync(httpContext, form, refreshService, clients, environment, loggerFactory);
         }
 
         if (!string.Equals(grantType, "authorization_code", StringComparison.OrdinalIgnoreCase))
@@ -218,6 +223,16 @@ public static class ConnectEndpoints
             includeRefresh,
             ParentRefreshToken: null));
 
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation(
+                "Issued auth code token for client {ClientId}, user {UserId}, scopes {Scopes}, includeRefresh {IncludeRefresh}",
+                clientId,
+                user.Id,
+                string.Join(' ', entry.Scopes),
+                includeRefresh);
+        }
+
         string? idToken = null;
         if (ContainsScope(entry.Scopes, "openid"))
         {
@@ -231,8 +246,11 @@ public static class ConnectEndpoints
         HttpContext httpContext,
         IFormCollection form,
         TokenRefreshService refreshService,
-        ClientRegistry clients)
+        ClientRegistry clients,
+        IHostEnvironment environment,
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("Auth.ConnectEndpoints");
         var refreshToken = form["refresh_token"].ToString();
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -250,6 +268,15 @@ public static class ConnectEndpoints
         try
         {
             var result = await refreshService.RefreshAsync(refreshToken, cancellationToken: httpContext.RequestAborted);
+
+            if (environment.IsDevelopment())
+            {
+                logger.LogInformation(
+                    "Refreshed token for client {ClientId}, scopes {Scopes}",
+                    clientId,
+                    string.Join(' ', result.Scopes));
+            }
+
             return Results.Json(TokenResponseHelper.BuildSuccess(result));
         }
         catch (Exception ex)

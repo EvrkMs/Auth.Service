@@ -10,6 +10,8 @@ using Auth.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Auth.Host.Endpoints;
 
@@ -32,8 +34,11 @@ public static class TokenEndpoints
         ISessionRepository sessionRepository,
         TokenService tokenService,
         ClientRegistry clients,
+        IHostEnvironment environment,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
+        var logger = loggerFactory.CreateLogger("Auth.TokenEndpoints");
         var clientValidation = ClientValidationHelper.Validate(clients, request.ClientId, request.ClientSecret);
         if (!clientValidation.IsValid)
         {
@@ -66,6 +71,16 @@ public static class TokenEndpoints
             scopes,
             request.IncludeRefreshToken), cancellationToken);
 
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation(
+                "Issued token via /tokens for client {ClientId}, user {UserId}, scopes {Scopes}, includeRefresh {IncludeRefresh}",
+                request.ClientId,
+                employee.Id,
+                string.Join(' ', scopes),
+                request.IncludeRefreshToken);
+        }
+
         return Results.Ok(new IssueTokenResponse(
             result.AccessToken.Value,
             result.AccessToken.ExpiresAt,
@@ -79,8 +94,11 @@ public static class TokenEndpoints
         UserManager<Employee> userManager,
         TokenRefreshService refreshService,
         ClientRegistry clients,
+        IHostEnvironment environment,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
+        var logger = loggerFactory.CreateLogger("Auth.TokenEndpoints");
         var clientValidation = ClientValidationHelper.Validate(clients, request.ClientId, request.ClientSecret);
         if (!clientValidation.IsValid)
         {
@@ -96,6 +114,14 @@ public static class TokenEndpoints
         try
         {
             var result = await refreshService.RefreshAsync(request.RefreshToken, employee, cancellationToken);
+            if (environment.IsDevelopment())
+            {
+                logger.LogInformation(
+                    "Refreshed token via /tokens/refresh for client {ClientId}, user {UserId}, scopes {Scopes}",
+                    request.ClientId,
+                    employee.Id,
+                    string.Join(' ', result.Scopes));
+            }
             return Results.Ok(new IssueTokenResponse(
                 result.AccessToken.Value,
                 result.AccessToken.ExpiresAt,
@@ -114,8 +140,11 @@ public static class TokenEndpoints
         ClientRegistry clients,
         ITokenRepository tokenRepository,
         ITokenValueGenerator tokenValueGenerator,
-        Auth.Application.Abstractions.ISystemClock clock)
+        Auth.Application.Abstractions.ISystemClock clock,
+        IHostEnvironment environment,
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger("Auth.TokenIntrospection");
         var (tokenValue, hintedType, clientId, clientSecret) = await ParseIntrospectionRequestAsync(context);
         if (string.IsNullOrWhiteSpace(tokenValue))
         {
@@ -132,6 +161,13 @@ public static class TokenEndpoints
         var token = await tokenRepository.FindByHashAsync(hash, context.RequestAborted);
         if (token is null || !token.IsActive(clock.UtcNow))
         {
+            if (environment.IsDevelopment())
+            {
+                logger.LogInformation(
+                    "Introspection inactive for client {ClientId}, hint {Hint}",
+                    clientId ?? string.Empty,
+                    hintedType ?? string.Empty);
+            }
             return Results.Json(new { active = false });
         }
 
@@ -155,6 +191,15 @@ public static class TokenEndpoints
         if (!string.IsNullOrWhiteSpace(token.SessionHandleHash))
         {
             response["sid"] = token.SessionHandleHash;
+        }
+
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation(
+                "Introspection active for client {ClientId}, sub {Sub}, scopes {Scopes}",
+                token.ClientId,
+                token.EmployeeId,
+                token.Scopes ?? string.Empty);
         }
 
         return Results.Json(response);

@@ -43,7 +43,7 @@ public sealed class ClientRegistry
                 ClientId = "spa-localhost",
                 DisplayName = "Localhost SPA",
                 RedirectUri = "http://localhost:4173/callback",
-                AllowedScopes = new[] { "openid", "profile", "offline_access" },
+                AllowedScopes = new[] { "openid", "profile", "offline_access", "safe.read", "safe.write", "safe:read", "safe:write" },
                 PostLogoutRedirectUri = "http://localhost:4173/logout"
             };
         }
