@@ -4,7 +4,7 @@ using Auth.Application.Abstractions;
 using Auth.Domain.Entity;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Auth.Host.Oidc;
+namespace Auth.Oidc.Oidc;
 
 public sealed class OidcIdTokenFactory
 {

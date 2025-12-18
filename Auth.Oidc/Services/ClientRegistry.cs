@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 using System.Linq;
 
-namespace Auth.Host.Services;
+namespace Auth.Oidc.Services;
 
 public sealed class ClientRegistry
 {

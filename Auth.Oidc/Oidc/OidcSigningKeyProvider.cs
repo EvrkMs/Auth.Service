@@ -4,7 +4,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Auth.Host.Oidc;
+namespace Auth.Oidc.Oidc;
 
 public sealed class OidcSigningKeyProvider
 {

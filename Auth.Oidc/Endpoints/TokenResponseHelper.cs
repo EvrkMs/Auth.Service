@@ -1,6 +1,6 @@
 using Auth.Application.Tokens;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Oidc.Endpoints;
 
 public static class TokenResponseHelper
 {

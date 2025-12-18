@@ -3,6 +3,7 @@
   <Project Path="Auth.EntityFramework/Auth.EntityFramework.csproj" />
   <Project Path="Auth.Application/Auth.Application.csproj" />
   <Project Path="Auth.Infrastructure/Auth.Infrastructure.csproj" />
+  <Project Path="Auth.Oidc/Auth.Oidc.csproj" />
   <Project Path="Auth.Host/Auth.Host.csproj" />
   <Project Path="Auth.Telegram/Auth.Telegram.csproj" />
 </Solution>

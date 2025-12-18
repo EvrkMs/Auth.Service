@@ -1,6 +1,6 @@
-using Auth.Host.Services;
+using Auth.Oidc.Services;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Oidc.Endpoints;
 
 public static class ClientValidationHelper
 {

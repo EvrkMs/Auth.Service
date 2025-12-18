@@ -2,7 +2,7 @@ using Auth.Application.Sessions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
 using Auth.Host.Models.Sessions;
-using Auth.Host.Sessions;
+using Auth.Oidc.Sessions;
 using Auth.Host.Filters;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +28,6 @@ public static class SessionsEndpoints
 
     private static async Task<IResult> GetSessionsAsync(
         HttpContext context,
-        [FromQuery(Name = "all")] bool includeAll,
         UserManager<Employee> userManager,
         ISessionRepository sessionRepository,
         ITokenValueGenerator tokenValueGenerator,
@@ -43,7 +42,7 @@ public static class SessionsEndpoints
         var sessions = await sessionRepository.GetByEmployeeIdAsync(user.Id, cancellationToken);
         var currentHash = SessionCookieHelper.GetSessionHandleHash(context, tokenValueGenerator);
 
-        var filtered = sessions.Where(s => includeAll || s.RevokedAt is null);
+        var filtered = sessions.Where(s => s.RevokedAt is null);
         var response = filtered
             .Select(session => MapSession(session, currentHash))
             .ToList();

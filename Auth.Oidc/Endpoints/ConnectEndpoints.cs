@@ -2,14 +2,16 @@ using Auth.Application.Sessions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
 using Auth.Domain.Tokens;
-using Auth.Host.Services;
-using Auth.Host.Oidc;
-using Auth.Host.Sessions;
+using Auth.Oidc.Services;
+using Auth.Oidc.Oidc;
+using Auth.Oidc.Sessions;
 using Auth.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,7 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Oidc.Endpoints;
 
 public static class ConnectEndpoints
 {

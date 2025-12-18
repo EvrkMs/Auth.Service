@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using Auth.Oidc.Services;
 
 namespace Auth.Host.Services;
 

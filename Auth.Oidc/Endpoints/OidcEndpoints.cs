@@ -1,8 +1,10 @@
-using Auth.Host.Oidc;
+using Auth.Oidc.Oidc;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Oidc.Endpoints;
 
 public static class OidcEndpoints
 {

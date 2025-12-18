@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 
-namespace Auth.Host.Sessions;
+namespace Auth.Oidc.Sessions;
 
 public static class SessionCookieHelper
 {

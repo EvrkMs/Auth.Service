@@ -2,7 +2,8 @@ using Auth.Domain.Entity;
 using Auth.EntityFramework;
 using Auth.Host.Endpoints;
 using Auth.Host.Services;
-using Auth.Host.Oidc;
+using Auth.Oidc.Extensions;
+using Auth.Oidc.Services;
 using Auth.Infrastructure;
 using Auth.Telegram;
 using Microsoft.AspNetCore.DataProtection;
@@ -22,23 +23,7 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var oidcSection = builder.Configuration.GetSection("Oidc");
-var oidcOptions = oidcSection.Get<OidcOptions>() ?? new OidcOptions();
-oidcOptions.SigningKey ??= builder.Configuration["OIDC__SIGNING_KEY"];
-var configuredIssuer =
-    builder.Configuration["OIDC__ISSUER"]
-    ?? builder.Configuration["AUTH_ISSUER"]
-    ?? builder.Configuration["AUTH_DOMAIN"]
-    ?? builder.Configuration["AUTH_HOST_DOMAIN"];
-
-if (!string.IsNullOrWhiteSpace(configuredIssuer))
-{
-    oidcOptions.Issuer = configuredIssuer!;
-}
-
-builder.Services.AddSingleton(oidcOptions);
-builder.Services.AddSingleton<OidcSigningKeyProvider>();
-builder.Services.AddSingleton<OidcIdTokenFactory>();
+builder.Services.AddOidcCore(builder.Configuration);
 builder.Services.AddTelegramIntegration(builder.Configuration);
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -116,8 +101,6 @@ builder.Services.AddAuthInfrastructure(options =>
 });
 
 builder.Services.AddScoped<IdentitySeeder>();
-builder.Services.AddSingleton<ClientRegistry>();
-builder.Services.AddSingleton<AuthorizationCodeStore>();
 
 var forwardedOptions = BuildForwardedHeadersOptions(builder.Configuration);
 var clientOrigins = GetClientOrigins(builder.Configuration);
@@ -172,11 +155,9 @@ app.MapRazorPages();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
-app.MapTokenEndpoints();
-app.MapConnectEndpoints();
+app.MapOidcCoreEndpoints();
 app.MapSessionsEndpoints();
 app.MapUserManagementEndpoints();
-app.MapOidcEndpoints();
 app.MapTelegramEndpoints();
 app.MapAntiforgeryEndpoints();
 

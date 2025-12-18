@@ -5,15 +5,16 @@ using Auth.Application.Sessions;
 using Auth.Application.Tokens;
 using Auth.Domain.Entity;
 using Auth.Domain.Tokens;
-using Auth.Host.Services;
+using Auth.Oidc.Services;
 using Auth.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Oidc.Endpoints;
 
 public static class TokenEndpoints
 {

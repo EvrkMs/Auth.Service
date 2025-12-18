@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Auth.Oidc\Auth.Oidc.csproj" />
     <ProjectReference Include="..\Auth.Infrastructure\Auth.Infrastructure.csproj" />
     <ProjectReference Include="..\Auth.EntityFramework\Auth.EntityFramework.csproj" />
     <ProjectReference Include="..\Auth.Application\Auth.Application.csproj" />

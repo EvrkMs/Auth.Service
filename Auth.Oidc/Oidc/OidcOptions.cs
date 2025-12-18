@@ -1,4 +1,4 @@
-namespace Auth.Host.Oidc;
+namespace Auth.Oidc.Oidc;
 
 public sealed class OidcOptions
 {
