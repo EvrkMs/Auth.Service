@@ -1,4 +1,4 @@
-namespace Auth.Host.Models.Telegram;
+namespace Auth.Telegram.Models;
 
 public sealed record TelegramBindRequest(
     long Id,

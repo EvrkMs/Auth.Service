@@ -1,11 +1,12 @@
 using Auth.Domain.Entity;
-using Auth.Host.Models.Telegram;
-using Auth.Telegram;
+using Auth.Telegram.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Auth.Host.Filters;
+using Microsoft.AspNetCore.Routing;
 
-namespace Auth.Host.Endpoints;
+namespace Auth.Telegram;
 
 public static class TelegramEndpoints
 {
@@ -14,8 +15,20 @@ public static class TelegramEndpoints
         var group = app.MapGroup("/api/telegram").RequireAuthorization();
 
         group.MapGet("/me", GetTelegramProfileAsync);
-        group.MapPost("/bind", BindTelegramAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
-        group.MapPost("/unbind", UnbindTelegramAsync).AddEndpointFilter<AntiforgeryValidationFilter>();
+        group.MapPost("/bind", BindTelegramAsync);
+        group.MapPost("/unbind", UnbindTelegramAsync);
+
+        return app;
+    }
+
+    public static IEndpointRouteBuilder MapTelegramEndpoints<TAntiforgeryFilter>(this IEndpointRouteBuilder app)
+        where TAntiforgeryFilter : IEndpointFilter
+    {
+        var group = app.MapGroup("/api/telegram").RequireAuthorization();
+
+        group.MapGet("/me", GetTelegramProfileAsync);
+        group.MapPost("/bind", BindTelegramAsync).AddEndpointFilter<TAntiforgeryFilter>();
+        group.MapPost("/unbind", UnbindTelegramAsync).AddEndpointFilter<TAntiforgeryFilter>();
 
         return app;
     }

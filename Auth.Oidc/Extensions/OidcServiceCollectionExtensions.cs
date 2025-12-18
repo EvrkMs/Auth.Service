@@ -31,4 +31,23 @@ public static class OidcServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddOidcCoreWithCors(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOidcCore(configuration);
+
+        var origins = OidcClientOrigins.Resolve(configuration);
+        services.AddCors(options =>
+        {
+            options.AddPolicy(OidcCorsDefaults.PolicyName, policy =>
+            {
+                policy.WithOrigins(origins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
+
+        return services;
+    }
 }

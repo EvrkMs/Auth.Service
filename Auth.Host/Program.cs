@@ -1,109 +1,35 @@
-using Auth.Domain.Entity;
-using Auth.EntityFramework;
 using Auth.Host.Endpoints;
+using Auth.Host.Extensions;
 using Auth.Host.Services;
 using Auth.Oidc.Extensions;
 using Auth.Oidc.Services;
-using Auth.Infrastructure;
 using Auth.Telegram;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http;
+using Auth.Host.Filters;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOidcCore(builder.Configuration);
-builder.Services.AddTelegramIntegration(builder.Configuration);
-
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? builder.Configuration["DATABASE__CONNECTION"];
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    var resolvedConnection = connectionString ?? "Host=localhost;Port=5432;Database=auth;Username=auth;Password=authpassword";
-    options.UseNpgsql(resolvedConnection);
-});
-
-var dataProtectionPath = builder.Configuration["DATA_PROTECTION_PATH"] ?? "/app/keys/data-protection";
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath));
-
 builder.Services
-    .AddIdentityCore<Employee>()
-    .AddRoles<IdentityRole<Guid>>()
-    .AddEntityFrameworkStores<AppDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
+    .AddOidcCoreWithCors(builder.Configuration)
+    .AddTelegramIntegration(builder.Configuration)
+    .AddAuthDatabase(builder.Configuration)
+    .AddAuthDataProtection(builder.Configuration)
+    .AddAuthIdentity()
+    .AddAuthAntiforgery()
+    .AddAuthInfrastructureDefaults();
 
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.Events ??= new CookieAuthenticationEvents();
-    options.Events.OnRedirectToLogin = context =>
-    {
-        if (ShouldReturnApiStatus(context.Request))
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        }
-
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-
-    options.Events.OnRedirectToAccessDenied = context =>
-    {
-        if (ShouldReturnApiStatus(context.Request))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        }
-
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-});
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
-}).AddIdentityCookies();
-
-builder.Services.AddAuthorization();
 builder.Services.AddRazorPages();
-builder.Services.AddAntiforgery(options =>
-{
-    options.HeaderName = "X-CSRF-TOKEN";
-    options.Cookie.Name = "__Host-af";
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    // Antiforgery cookie должен ходить между поддоменами, поэтому SameSite=None при сохранении Secure
-    options.Cookie.SameSite = SameSiteMode.None;
-});
-
-builder.Services.AddAuthInfrastructure(options =>
-{
-    options.AccessTokenLifetime = TimeSpan.FromMinutes(5);
-    options.RefreshTokenLifetime = TimeSpan.FromDays(30);
-});
-
 builder.Services.AddScoped<IdentitySeeder>();
 
 var forwardedOptions = BuildForwardedHeadersOptions(builder.Configuration);
-var clientOrigins = GetClientOrigins(builder.Configuration);
+var clientOrigins = OidcClientOrigins.Resolve(builder.Configuration);
 builder.Services.AddSingleton<RedirectUrlPolicy>(sp =>
 {
     var clients = sp.GetRequiredService<ClientRegistry>();
@@ -112,27 +38,9 @@ builder.Services.AddSingleton<RedirectUrlPolicy>(sp =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("ClientOrigins", policy =>
-    {
-        policy.WithOrigins(clientOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-
-    var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
-    await seeder.SeedAsync();
-}
+await app.ApplyAuthMigrationsAsync();
 
 if (app.Environment.IsDevelopment())
 {
@@ -146,51 +54,19 @@ if (forwardedOptions is not null)
 {
     app.UseForwardedHeaders(forwardedOptions);
 }
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseCors("ClientOrigins");
+app.UseAuthPipeline(builder.Configuration);
+app.UseOidcCore();
 
 app.MapRazorPages();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
-app.MapOidcCoreEndpoints();
 app.MapSessionsEndpoints();
 app.MapUserManagementEndpoints();
-app.MapTelegramEndpoints();
+app.MapTelegramEndpoints<AntiforgeryValidationFilter>();
 app.MapAntiforgeryEndpoints();
 
 app.Run();
-
-static string[] GetClientOrigins(IConfiguration configuration)
-{
-    var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    var section = configuration.GetSection("AuthClients");
-    if (section.Exists())
-    {
-        foreach (var child in section.GetChildren())
-        {
-            var redirect = child["RedirectUri"];
-            if (string.IsNullOrWhiteSpace(redirect))
-            {
-                continue;
-            }
-
-            if (Uri.TryCreate(redirect, UriKind.Absolute, out var uri))
-            {
-                origins.Add(uri.GetLeftPart(UriPartial.Authority));
-            }
-        }
-    }
-
-    if (origins.Count == 0)
-    {
-        origins.Add("http://localhost:4173");
-    }
-
-    return origins.ToArray();
-}
 
 static ForwardedHeadersOptions? BuildForwardedHeadersOptions(IConfiguration configuration)
 {
@@ -267,28 +143,4 @@ static bool TryAddNetwork(ForwardedHeadersOptions options, string cidr)
 
     options.KnownIPNetworks.Add(new System.Net.IPNetwork(address, prefixLength));
     return true;
-}
-
-static bool ShouldReturnApiStatus(HttpRequest request)
-{
-    if (request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
-    {
-        return true;
-    }
-
-    if (request.Headers.TryGetValue("Accept", out var accept) &&
-        !Microsoft.Extensions.Primitives.StringValues.IsNullOrEmpty(accept) &&
-        accept.Any(value => value.Contains("application/json", StringComparison.OrdinalIgnoreCase)))
-    {
-        return true;
-    }
-
-    if (request.Headers.TryGetValue("X-Requested-With", out var requestedWith) &&
-        !Microsoft.Extensions.Primitives.StringValues.IsNullOrEmpty(requestedWith) &&
-        requestedWith.Any(value => value.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase)))
-    {
-        return true;
-    }
-
-    return false;
 }
