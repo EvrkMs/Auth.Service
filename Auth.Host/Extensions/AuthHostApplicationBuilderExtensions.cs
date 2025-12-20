@@ -31,19 +31,28 @@ public static class AuthHostApplicationBuilderExtensions
             var csp = configuration["SECURITY__CSP"];
             if (string.IsNullOrWhiteSpace(csp))
             {
-                csp = "default-src 'self'; " +
-                      "base-uri 'self'; " +
-                      "object-src 'none'; " +
-                      "frame-ancestors 'none'; " +
-                      "form-action 'self'; " +
-                      "img-src 'self' data: https://telegram.org; " +
-                      "font-src 'self' data: https://cdnjs.cloudflare.com; " +
-                      "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
-                      "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://telegram.org; " +
-                      "connect-src 'self' https://cdn.tailwindcss.com https://telegram.org; " +
-                      "upgrade-insecure-requests";
-            }
+                csp =
+                    "default-src 'self'; " +
+                    "base-uri 'self'; " +
+                    "object-src 'none'; " +
+                    "frame-ancestors 'none'; " +
 
+                    // Telegram widget iframe
+                    "frame-src https://oauth.telegram.org; " +
+
+                    "form-action 'self'; " +
+                    "img-src 'self' data: https://telegram.org; " +
+                    "font-src 'self' https://cdnjs.cloudflare.com; " +
+                    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
+
+                    // telegram-widget.js uses eval()
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdn.tailwindcss.com; " +
+
+                    // Telegram API calls
+                    "connect-src 'self' https://telegram.org https://oauth.telegram.org; " +
+
+                    "upgrade-insecure-requests";
+            }
             context.Response.Headers["Content-Security-Policy"] = csp;
             await next();
         });
