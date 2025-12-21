@@ -1,17 +1,4 @@
 services:
-  auth-db:
-    image: postgres:18
-    container_name: postgres
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - auth-db-data:/var/lib/postgresql
-    ports:
-      - "5432:5432"
-    networks:
-      - data-network
-
   auth-host:
     container_name: auth.service
     build:
@@ -19,8 +6,6 @@ services:
       dockerfile: Auth.Host/Dockerfile
     env_file:
       - .env
-    depends_on:
-      - auth-db
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -28,7 +13,6 @@ services:
       - auth-keys:/app/keys
     networks:
       - auth-network
-      - data-network
       - nginx_network
 
 volumes:
@@ -39,10 +23,6 @@ networks:
   auth-network:
     driver: bridge
     name: auth-network
-
-  data-network:
-    name: data-network
-    driver: bridge
 
   nginx_network:
     external: true
